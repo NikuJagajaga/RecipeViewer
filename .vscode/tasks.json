@@ -1,0 +1,25 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+            "label": "Push All",
+            "type": "shell",
+            "command": "adb push 'D:/icmod/Recipe Viewer/src/.' '/storage/emulated/0/games/horizon/packs/Inner_Core/innercore/mods/Recipe Viewer/.'",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Push Codes",
+            "type": "shell",
+            "command": "adb push 'D:/icmod/Recipe Viewer/src/dev/.' '/storage/emulated/0/games/horizon/packs/Inner_Core/innercore/mods/Recipe Viewer/dev/.'",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+	]
+}
