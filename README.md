@@ -7,7 +7,7 @@
 * Tapping back button will back to previous page while long tapping will close recipe window.
 ### Introduction Videos
 * Basic usage  [![](http://img.youtube.com/vi/Cajagp_BZyU/0.jpg)](http://www.youtube.com/watch?v=Cajagp_BZyU)
-* New feature  [![](http://img.youtube.com/vi/XXLsaUkFfUE/0.jpg)](http://www.youtube.com/watch?v=XXLsaUkFfUE "")
+* New features  [![](http://img.youtube.com/vi/XXLsaUkFfUE/0.jpg)](http://www.youtube.com/watch?v=XXLsaUkFfUE "")
 
 
 ## How to add Recipe Type (for Developers)
@@ -123,35 +123,39 @@ RV.registerRecipeType("icpe_ore_washer", {
 ```
 * Pattern B (Recommended)
 ```
-const recipe = MachineRecipeRegistry.requireRecipesFor("oreWasher");
-const recipeList = [];
-let result;
-for(let key in recipe){
-    result = recipe[key];
-    list.push({
-        input: [{id: parseInt(key), count: 1, data: 0}],
-        output: [
-            {id: result[0] || 0, count: result[1] || 0, data: 0},
-            {id: result[2] || 0, count: result[3] || 0, data: 0},
-            {id: result[4] || 0, count: result[5] || 0, data: 0}
-        ]
-    });
-}
+Callback.addCallback("PostLoaded", function(){
 
-RV.registerRecipeType("icpe_ore_washer", {
-    contents: {
-        icon: BlockID.oreWasher,
-        drawing: [
-            {type: "bitmap", x: 300, y: 110, scale: 5, bitmap: "ore_washer_background_edit"}
-        ],
-        elements: {
-            input0: {type: "slot", x: 515, y: 90, size: 90},
-            output0: {type: "slot", x: 425, y: 315, size: 90},
-            output1: {type: "slot", x: 515, y: 315, size: 90},
-            output2: {type: "slot", x: 605, y: 315, size: 90}
-        }
-    },
-    recipeList: recipeList
+    const recipe = MachineRecipeRegistry.requireRecipesFor("oreWasher");
+    const recipeList = [];
+    let result;
+    for(let key in recipe){
+        result = recipe[key];
+        list.push({
+            input: [{id: parseInt(key), count: 1, data: 0}],
+            output: [
+                {id: result[0] || 0, count: result[1] || 0, data: 0},
+                {id: result[2] || 0, count: result[3] || 0, data: 0},
+                {id: result[4] || 0, count: result[5] || 0, data: 0}
+            ]
+        });
+    }
+
+    RV.registerRecipeType("icpe_ore_washer", {
+        contents: {
+            icon: BlockID.oreWasher,
+            drawing: [
+                {type: "bitmap", x: 300, y: 110, scale: 5, bitmap: "ore_washer_background_edit"}
+            ],
+            elements: {
+                input0: {type: "slot", x: 515, y: 90, size: 90},
+                output0: {type: "slot", x: 425, y: 315, size: 90},
+                output1: {type: "slot", x: 515, y: 315, size: 90},
+                output2: {type: "slot", x: 605, y: 315, size: 90}
+            }
+        },
+        recipeList: recipeList
+    });
+
 });
 ```
 ### Open Recipe Viewer from custom GUI
