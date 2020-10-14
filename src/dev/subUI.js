@@ -65,7 +65,7 @@ const SubUI = {
                         SubUI.enabled && SubUI.turnPage((SubUI.list.length - 1) * value | 0);
                     }
                 },
-                textPage: {type: "text", x: 500, y: 555, font: {size: 40}}
+                textPage: {type: "text", x: 575, y: 555, font: {size: 40, alignment: 1}}
             }
         });
 

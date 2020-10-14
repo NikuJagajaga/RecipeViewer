@@ -4,6 +4,7 @@
 		"../_MODULE_/android-declarations.d.ts",
 		"../_MODULE_/android.d.ts",
 		"../_MODULE_/core-engine.d.ts",
-		"../_MODULE_/additional.d.ts"
+		"../_MODULE_/additional.d.ts",
+		"../_MODULE_/VanillaRecipe.d.ts"
 	]
 }

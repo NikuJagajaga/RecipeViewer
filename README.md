@@ -142,16 +142,7 @@ Callback.addCallback("PostLoaded", function(){
 
     RV.registerRecipeType("icpe_ore_washer", {
         contents: {
-            icon: BlockID.oreWasher,
-            drawing: [
-                {type: "bitmap", x: 300, y: 110, scale: 5, bitmap: "ore_washer_background_edit"}
-            ],
-            elements: {
-                input0: {type: "slot", x: 515, y: 90, size: 90},
-                output0: {type: "slot", x: 425, y: 315, size: 90},
-                output1: {type: "slot", x: 515, y: 315, size: 90},
-                output2: {type: "slot", x: 605, y: 315, size: 90}
-            }
+            //same as above
         },
         recipeList: recipeList
     });

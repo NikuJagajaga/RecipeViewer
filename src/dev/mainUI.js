@@ -110,11 +110,7 @@ const MainUI = {
             }}
         };
 
-        elements.textPage = {
-            type: "text",
-            x: 450, y: y,
-            font: {size: 40}
-        };
+        elements.textPage = {type: "text", x: 500, y: y, font: {size: 40, alignment: 1}};
 
         this.window = new UI.Window({
             location: {

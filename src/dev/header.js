@@ -1,4 +1,5 @@
 IMPORT("ChargeItem");
+IMPORT("VanillaRecipe");
 
 const Bitmap = android.graphics.Bitmap;
 const Canvas = android.graphics.Canvas;
@@ -8,6 +9,7 @@ const Context = UI.getContext();
 const ScreenWidth = 1000;
 const ScreenHeight = UI.getScreenHeight();
 
+const setLoadingTip = ModAPI.requireGlobal("MCSystem.setLoadingTip");
 const NativeAPI = ModAPI.requireGlobal("requireMethodFromNativeAPI");
 const InvSource = {
     get: NativeAPI("api.mod.util.InventorySource", "getSource"),
@@ -149,6 +151,9 @@ const RecipeViewer = {
         const length = {input: 0, output: 0};
         let elem;
         let isInput = isOutput = false;
+        if(!object.contents.icon){
+            object.contents.icon = {id: VanillaItemID.stick};;
+        }
         if(typeof object.contents.icon === "number"){
             object.contents.icon = {id: object.contents.icon};
         }
@@ -428,7 +433,19 @@ Callback.addCallback("PostLoaded", function(){
     for(key in ItemID){
         RecipeViewer.list.some(function(item){return item.id == ItemID[key];}) || RecipeViewer.addList(ItemID[key], 0, "item");
     }
-    
+/*
+    const files = FileTools.GetListOfFiles(__packdir__ + "assets/definitions/recipe/", "json");
+    const type = {};
+    let json;
+    for(let i = 0, length = files.length; i < length; i++){
+        json = FileTools.ReadJSON(files[i].getAbsolutePath());
+        type[json.type] = true;
+        setLoadingTip("[RV]: Read JSON (" + i + " / " + length + ")");
+    }
+    for(key in type){
+        alert(key);
+    }
+*/
     RecipeViewer.recipeTypeLength = Object.keys(RecipeViewer.recipeType).length;
     MainUI.setupWindow();
     SubUI.setupWindow();
