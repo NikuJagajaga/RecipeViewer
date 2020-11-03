@@ -110,11 +110,14 @@ Callback.addCallback("PostLoaded", function(){
         if(json.tags){
             json.tags.forEach(function(tag){
                 switch(tag){
+                    case "campfire": CampfireRecipe.addFromJSON(json); break;
+                    case "smoker": SmokerRecipe.addFromJSON(json); break;
+                    case "blast_furnace": BlastFurnaceRecipe.addFromJSON(json); break;
                     case "stonecutter": StonecutterRecipe.addFromJSON(json); break;
                 }
             });
         }
-        setLoadingTip("[RV]: read JSON  (" + index + " / " + jsons.length + ")");
+        setLoadingTip("[RV]: read JSON  (" + (index + 1) + " / " + jsons.length + ")");
     });
     
 });

@@ -304,7 +304,14 @@ const RecipeViewer = {
     },
 
     getName: function(id, data){
-        let name = Item.getName(id, data === -1 ? 0 : data);
+        let name = "";
+        try{
+            name = Item.getName(id, data === -1 ? 0 : data);
+        }
+        catch(e){
+            alert(e);
+            name = "name name";
+        }
         index = name.indexOf("\n");
         if(index !== -1){
             name = name.slice(0, index);
