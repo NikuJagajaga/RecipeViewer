@@ -8,7 +8,7 @@ const MainUI = {
     elements: null,
 
     setupWindow: function(){
-        
+
         const elements = {
             close: {
                 type: "closeButton",
@@ -23,7 +23,7 @@ const MainUI = {
                     Context.runOnUiThread(new java.lang.Runnable({
                         run: function(){
                             try{
-                                const editText = new android.widget.EditText(Context); 
+                                const editText = new android.widget.EditText(Context);
                                 editText.setHint("in this space");
                                 new android.app.AlertDialog.Builder(Context)
                                     .setTitle("Please type the keywords")
@@ -88,11 +88,10 @@ const MainUI = {
         }
 
         this.slotCount = i;
-        y = ScreenHeight - 60;
 
         elements.buttonPrev = {
             type: "button",
-            x: 20, y: y, scale: 2,
+            x: 20, y: ScreenHeight - 60, scale: 2,
             bitmap: "_button_prev_48x24", bitmap2: "_button_prev_48x24p",
             clicker: {onClick: function(){
                 MainUI.page--;
@@ -102,7 +101,7 @@ const MainUI = {
 
         elements.buttonNext = {
             type: "button",
-            x: 884, y: y, scale: 2,
+            x: 884, y: ScreenHeight - 60, scale: 2,
             bitmap: "_button_next_48x24", bitmap2: "_button_next_48x24p",
             clicker: {onClick: function(){
                 MainUI.page++;
@@ -110,7 +109,7 @@ const MainUI = {
             }}
         };
 
-        elements.textPage = {type: "text", x: 500, y: y, font: {size: 40, alignment: 1}};
+        elements.textPage = {type: "text", x: 490, y: ScreenHeight - 80, font: {size: 40, align: 1}};
 
         this.window = new UI.Window({
             location: {
@@ -121,12 +120,12 @@ const MainUI = {
             },
             params: {slot: "_default_slot_empty"},
             drawing: [
-                {type: "background", color: Color.TRANSPARENT},
+                //{type: "background", color: Color.TRANSPARENT},
                 {type: "frame", x: 0, y: 0, width: ScreenWidth, height: ScreenHeight, bitmap: "default_frame_bg_light", scale: 2}
             ],
             elements: elements
         });
-        
+
         this.window.setBlockingBackground(true);
         this.window.setAsGameOverlay(true);
         this.elements = this.window.getElements();

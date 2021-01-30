@@ -19,7 +19,7 @@ RecipeViewer.registerRecipeType("workbench", {
     },
     getList: function(id, data, isUsage){
         const list = [];
-        const data2 = ChargeItemRegistry.getItemData(id) ? -1 : data;
+        const data2 = Item.getMaxDamage(id) ? -1 : data;
         const recipe = isUsage ? Recipes.getWorkbenchRecipesByIngredient(id, data2) : Recipes.getWorkbenchRecipesByResult(id, -1, data2);
         const iterator = recipe.iterator();
         let entry, field, result, input, chargeData;

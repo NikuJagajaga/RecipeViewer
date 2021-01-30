@@ -1,6 +1,5 @@
 const SubUI = {
 
-    enabled: false,
     cache: [],
     list: [],
     page: 0,
@@ -12,7 +11,7 @@ const SubUI = {
     setupWindow: function(){
 
         this.window.addWindow("controller", {
-            location: {x: 140, y: 20, width: 720, height: 480},
+            location: {x: 140, y: 10, width: 720, height: 480},
             drawing: [
                 {type: "background", color: Color.TRANSPARENT},
                 {type: "frame", x: 0, y: 0, width: 1000, height: 666.7, bitmap: "default_frame_bg_light", scale: 2}
@@ -45,27 +44,39 @@ const SubUI = {
                     type: "button",
                     x: 150, y: 610, scale: 2,
                     bitmap: "_button_prev_48x24", bitmap2: "_button_prev_48x24p",
-                    clicker: {onClick: function(){
-                        SubUI.turnPage(SubUI.page - 1);
-                    }}
+                    clicker: {
+                        onClick: function(){
+                            SubUI.turnPage(SubUI.page - 1);
+                        },
+                        onLongClick: function(){
+                            SubUI.turnPage(0);
+                        }
+                    }
                 },
                 buttonNext: {
                     type: "button",
                     x: 854, y: 610, scale: 2,
                     bitmap: "_button_next_48x24", bitmap2: "_button_next_48x24p",
-                    clicker: {onClick: function(){
-                        SubUI.turnPage(SubUI.page + 1);
-                    }}
+                    clicker: {
+                        onClick: function(){
+                            SubUI.turnPage(SubUI.page + 1);
+                        },
+                        onLongClick: function(){
+                            SubUI.turnPage(SubUI.list.length - 1);
+                        }
+                    }
                 },
                 scrollPage: {
                     type: "scroll",
                     x: 350, y: 595, length: 400,
-                    min: 0, max: 1,
-                    onNewValue: function(value){
-                        SubUI.enabled && SubUI.turnPage((SubUI.list.length - 1) * value | 0);
+                    onTouchEvent: function(elem, event){
+                        const len = SubUI.list.length - 1;
+                        const page = Math.round(event.localX * len);
+                        SubUI.turnPage(page);
+                        event.localX = page / len;
                     }
                 },
-                textPage: {type: "text", x: 575, y: 555, font: {size: 40, alignment: 1}}
+                textPage: {type: "text", x: 575, y: 535, font: {size: 40, align: 1}}
             }
         });
 
@@ -76,7 +87,6 @@ const SubUI = {
                 type: "slot",
                 x: 0, y: i * 1000, size: 1000,
                 visual: true, needClean: true,
-                //darken: true, isDarkenAtZero: false,
                 clicker: {
                     onClick: function(o1, o2, elem){
                         elem.source.id && SubUI.changeWindow(elem.y / 1000 | 0);
@@ -98,7 +108,7 @@ const SubUI = {
         elements.cursor = {type: "image", x: 0, y: 0, z: 1, bitmap: "_selection", scale: 27.78};
         this.window.addWindow("tray", {
             location: {
-                x: 150, y: 30,
+                x: 150, y: 20,
                 width: 60, height: 400,
                 padding: {top: 30, bottom: ScreenHeight - 490},
                 scrollY: RecipeViewer.recipeTypeLength * 60
@@ -110,7 +120,6 @@ const SubUI = {
 
         this.window.setContainer(new UI.Container());
         this.window.setBlockingBackground(true);
-        this.enabled = true;
 
     },
 
@@ -184,6 +193,7 @@ const SubUI = {
         const onOpen = RecipeViewer.getOpenFunc(this.select);
         let elements = this.window.getWindow("controller").getElements();
         this.page = page < 0 ? this.list.length : page >= this.list.length ? 0 : page;
+        elements.get("scrollPage").onBindingUpdated("raw-value", java.lang.Float.valueOf(this.page / (this.list.length - 1)));
         elements.get("textPage").onBindingUpdated("text", (this.page + 1) + " / " + this.list.length);
         const recipe = this.list[this.page];
         elements = this.window.getWindow("custom").getElements();
@@ -298,7 +308,7 @@ const SubUI = {
             }
 
         });
-        
+
     }
 
 };

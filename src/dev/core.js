@@ -8,7 +8,7 @@ const RecipeViewer = {
     list: [],
     recipeType: {},
     recipeTypeLength: 0,
-    
+
     removeDuplicate: function(item1, index, array){
         return array.findIndex(function(item2){
             return item1.id == item2.id && item1.data == item2.data;
@@ -31,7 +31,7 @@ const RecipeViewer = {
             }
         }
     },
-    
+
     setup: function(){
         const x = __config__.getNumber("ButtonPosition.x");
         const y = __config__.getNumber("ButtonPosition.y");
@@ -355,7 +355,7 @@ const RecipeViewer = {
 
 
 Callback.addCallback("PostLoaded", function(){
-    
+
     const NativeAPI = ModAPI.requireGlobal("requireMethodFromNativeAPI");
     const getAssetAsJSON = NativeAPI("utils.FileTools", "getAssetAsJSON");
     let it;//go
@@ -374,7 +374,7 @@ Callback.addCallback("PostLoaded", function(){
         item = it.next().split(":");
         RecipeViewer.addList(item[0], item[1] || -1, "item");
     }
-    
+
     for(key in BlockID){
         recipes = Recipes.getWorkbenchRecipesByResult(BlockID[key], -1, -1);
         if(recipes.isEmpty()){
@@ -387,7 +387,7 @@ Callback.addCallback("PostLoaded", function(){
             RecipeViewer.addList(item.id, item.data, "block");
         }
     }
-    
+
     for(key in ItemID){
         RecipeViewer.list.some(function(item){return item.id == ItemID[key];}) || RecipeViewer.addList(ItemID[key], 0, "item");
     }
@@ -395,7 +395,7 @@ Callback.addCallback("PostLoaded", function(){
     RecipeViewer.recipeTypeLength = Object.keys(RecipeViewer.recipeType).length;
     MainUI.setupWindow();
     SubUI.setupWindow();
-    
+
 });
 
 

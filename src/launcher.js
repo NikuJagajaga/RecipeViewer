@@ -1,10 +1,5 @@
-try{
-    ConfigureMultiplayer({
-        isClientOnly: true
-    });
-}
-catch(e){
-
-}
+ConfigureMultiplayer({
+    isClientOnly: true
+});
 
 Launch();
