@@ -1,0 +1,43 @@
+{
+    "compilerOptions": {
+        "target": "ES5",
+        "lib": [
+            "ESNext"
+        ],
+        "strict": false,
+        "skipLibCheck": true,
+        "outFile": "../main.js",
+        "newLine": "LF"
+    },
+    "include": [
+
+        "header.ts",
+
+        "api/BehaviorTools.ts",
+        "api/ItemList.ts",
+        "api/RecipeType.ts",
+        "api/RecipeTypeRegistry.ts",
+        "api/old.ts",
+
+        "window/StartButton.ts",
+        "window/MainUI.ts",
+        "window/SubUI.ts",
+        "window/RButton.ts",
+
+        "recipe/workbench.ts",
+        "recipe/furnace.ts",
+        "recipe/like_furnace.ts",
+        "recipe/brewing.ts",
+        "recipe/stonecutter.ts",
+        "recipe/trading.ts",
+
+        "footer.ts"
+
+      ],
+    "files": [
+        "../../../_MODULE_/android-declarations.d.ts",
+        "../../../_MODULE_/android.d.ts",
+        "../../../_MODULE_/core-engine.d.ts",
+        "../../../_MODULE_/additional.d.ts"
+    ]
+}

@@ -2,23 +2,26 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "Compile",
+            "type": "typescript",
+            "tsconfig": "src/dev/tsconfig.json",
+            "problemMatcher": [
+                "$tsc"
+            ],
+            "group": "build",
+        },
+        {
             "label": "Push All",
             "type": "shell",
             "command": "adb push '${workspaceFolder}/src/.' '/storage/emulated/0/games/horizon/packs/Inner_Core/innercore/mods/${workspaceFolderBasename}/.'",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
+            "group": "build",
             "problemMatcher": []
         },
         {
-            "label": "Push Codes",
+            "label": "Push Code",
             "type": "shell",
-            "command": "adb push '${workspaceFolder}/src/dev/.' '/storage/emulated/0/games/horizon/packs/Inner_Core/innercore/mods/${workspaceFolderBasename}/dev/.'",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
+            "command": "adb push '${workspaceFolder}/src/main.js' '/storage/emulated/0/games/horizon/packs/Inner_Core/innercore/mods/${workspaceFolderBasename}/main.js'",
+            "group": "build",
             "problemMatcher": []
         }
     ]
