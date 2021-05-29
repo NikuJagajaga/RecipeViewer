@@ -119,7 +119,8 @@ class ItemList {
     }
 
     static setup(): void {
-        this.list.filter(item => Item.isValid(item.id)).filter(removeDuplicateFilterFunc).forEach(item => {
+        this.list = this.list.filter(item => Item.isValid(item.id)).filter(removeDuplicateFilterFunc);
+        this.list.forEach(item => {
             item.name = this.getName(item.id, item.data);
         });
     }
