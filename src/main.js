@@ -1348,11 +1348,16 @@ var BrewingRecipe = /** @class */ (function (_super) {
             ]
         });
     };
+    BrewingRecipe.getName = function (meta) {
+        return Item.getName(VanillaItemID.potion, meta).replace(" Potion", "").replace("Potion of ", "");
+    };
     BrewingRecipe.prototype.getAllList = function () {
         return BrewingRecipe.recipeListOld;
         //return isLegacy ? BrewingRecipe.recipeListOld : BrewingRecipe.recipeList;
     };
     BrewingRecipe.prototype.onOpen = function (elements, recipe) {
+        elements.get("text1").setBinding("text", BrewingRecipe.getName(recipe.input[2].data));
+        elements.get("text2").setBinding("text", BrewingRecipe.getName(recipe.output[0].data));
     };
     BrewingRecipe.recipeList = [];
     BrewingRecipe.recipeListOld = (function () {

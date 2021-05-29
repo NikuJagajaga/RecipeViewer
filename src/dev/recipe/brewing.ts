@@ -126,6 +126,10 @@ class BrewingRecipe extends RecipeType {
 
     })();
 
+    static getName(meta: number): string {
+        return Item.getName(VanillaItemID.potion, meta).replace(" Potion", "").replace("Potion of ", "");
+    }
+
     constructor(){
         super("Potion Brewing", VanillaBlockID.brewing_stand, {
             params: {slot: "classic_slot"},
@@ -149,7 +153,8 @@ class BrewingRecipe extends RecipeType {
     }
 
     onOpen(elements: java.util.HashMap<string, UI.Element>, recipe: RecipePattern): void {
-
+        elements.get("text1").setBinding("text", BrewingRecipe.getName(recipe.input[2].data));
+        elements.get("text2").setBinding("text", BrewingRecipe.getName(recipe.output[0].data));
     }
 
 }
