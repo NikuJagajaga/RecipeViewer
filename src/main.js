@@ -347,8 +347,8 @@ var RecipeType = /** @class */ (function () {
             return this.getList(id, data, isUsage).length > 0;
         }
         return isUsage ?
-            list.some(function (recipe) { return recipe.input ? recipe.input.some(function (item) { return item.id === id && (data === -1 || item.data === data); }) : false; }) :
-            list.some(function (recipe) { return recipe.output ? recipe.output.some(function (item) { return item.id === id && (data === -1 || item.data === data); }) : false; });
+            list.some(function (recipe) { return recipe.input ? recipe.input.some(function (item) { return item && item.id === id && (data === -1 || item.data === data); }) : false; }) :
+            list.some(function (recipe) { return recipe.output ? recipe.output.some(function (item) { return item && item.id === id && (data === -1 || item.data === data); }) : false; });
     };
     RecipeType.prototype.hasAnyRecipeByLiquid = function (liquid, isUsage) {
         var list = this.getAllList();
@@ -356,8 +356,8 @@ var RecipeType = /** @class */ (function () {
             return this.getListByLiquid(liquid, isUsage).length > 0;
         }
         return isUsage ?
-            list.some(function (recipe) { return recipe.inputLiq ? recipe.inputLiq.some(function (liq) { return liq.liquid === liquid; }) : false; }) :
-            list.some(function (recipe) { return recipe.outputLiq ? recipe.outputLiq.some(function (liq) { return liq.liquid === liquid; }) : false; });
+            list.some(function (recipe) { return recipe.inputLiq ? recipe.inputLiq.some(function (liq) { return liq && liq.liquid === liquid; }) : false; }) :
+            list.some(function (recipe) { return recipe.outputLiq ? recipe.outputLiq.some(function (liq) { return liq && liq.liquid === liquid; }) : false; });
     };
     RecipeType.prototype.onOpen = function (elements, recipe) {
     };
@@ -439,14 +439,26 @@ var RecipeTypeRegistry = /** @class */ (function () {
     RecipeTypeRegistry.getActiveType = function (id, data, isUsage) {
         var array = [];
         for (var key in this.types) {
-            this.types[key].hasAnyRecipe(id, data, isUsage) && array.push(key);
+            try {
+                this.types[key].hasAnyRecipe(id, data, isUsage) && array.push(key);
+            }
+            catch (e) {
+                alert('[RV] RecipeType "' + key + '" has been deleted.\n' + e);
+                delete this.types[key];
+            }
         }
         return array;
     };
     RecipeTypeRegistry.getActiveTypeByLiquid = function (liquid, isUsage) {
         var array = [];
         for (var key in this.types) {
-            this.types[key].hasAnyRecipeByLiquid(liquid, isUsage) && array.push(key);
+            try {
+                this.types[key].hasAnyRecipeByLiquid(liquid, isUsage) && array.push(key);
+            }
+            catch (e) {
+                alert('[RV] RecipeType "' + key + '" has been deleted.\n' + e);
+                delete this.types[key];
+            }
         }
         return array;
     };
@@ -904,7 +916,7 @@ var SubUI = /** @class */ (function () {
                         var target = SubUI.getTarget();
                         var key = target.tray[elem.y / 1000 | 0];
                         var recipeType = RecipeTypeRegistry.get(key);
-                        recipeType && recipeType.getAllList && SubUI.openWindow(key);
+                        recipeType && SubUI.openWindow(key);
                     }
                 }
             };
@@ -1006,10 +1018,9 @@ var SubUI = /** @class */ (function () {
     SubUI.changeWindow = function (index) {
         var trayWindow = this.window.getWindow("tray");
         var target = this.getTarget();
-        var tray = typeof target === "string" ? [target] : target.tray;
-        this.select = tray[index];
+        this.select = target.tray[index];
         trayWindow.getElements().get("cursor").setPosition(0, index * 1000);
-        trayWindow.getLocation().setScroll(0, tray.length * 60);
+        trayWindow.getLocation().setScroll(0, target.tray.length * 60);
         var recipeType = RecipeTypeRegistry.get(this.select);
         this.window.addWindowInstance("custom", recipeType.getWindow());
         try {

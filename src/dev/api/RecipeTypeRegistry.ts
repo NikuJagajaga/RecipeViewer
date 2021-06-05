@@ -25,7 +25,13 @@ class RecipeTypeRegistry {
     static getActiveType(id: number, data: number, isUsage: boolean): string[] {
         const array: string[] = [];
         for(let key in this.types){
-            this.types[key].hasAnyRecipe(id, data, isUsage) && array.push(key);
+            try{
+                this.types[key].hasAnyRecipe(id, data, isUsage) && array.push(key);
+            }
+            catch(e){
+                alert('[RV] RecipeType "' + key + '" has been deleted.\n' + e);
+                delete this.types[key];
+            }
         }
         return array;
     }
@@ -33,7 +39,13 @@ class RecipeTypeRegistry {
     static getActiveTypeByLiquid(liquid: string, isUsage: boolean): string[] {
         const array: string[] = [];
         for(let key in this.types){
-            this.types[key].hasAnyRecipeByLiquid(liquid, isUsage) && array.push(key);
+            try{
+                this.types[key].hasAnyRecipeByLiquid(liquid, isUsage) && array.push(key);
+            }
+            catch(e){
+                alert('[RV] RecipeType "' + key + '" has been deleted.\n' + e);
+                delete this.types[key];
+            }
         }
         return array;
     }

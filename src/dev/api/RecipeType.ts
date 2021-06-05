@@ -112,8 +112,8 @@ abstract class RecipeType {
             return this.getList(id, data, isUsage).length > 0;
         }
         return isUsage ?
-            list.some(recipe => recipe.input ? recipe.input.some(item => item.id === id && (data === -1 || item.data === data)) : false) :
-            list.some(recipe => recipe.output ? recipe.output.some(item => item.id === id && (data === -1 || item.data === data)) : false);
+            list.some(recipe => recipe.input ? recipe.input.some(item => item && item.id === id && (data === -1 || item.data === data)) : false) :
+            list.some(recipe => recipe.output ? recipe.output.some(item => item && item.id === id && (data === -1 || item.data === data)) : false);
     }
 
     hasAnyRecipeByLiquid(liquid: string, isUsage: boolean): boolean {
@@ -122,8 +122,8 @@ abstract class RecipeType {
             return this.getListByLiquid(liquid, isUsage).length > 0;
         }
         return isUsage ?
-            list.some(recipe => recipe.inputLiq ? recipe.inputLiq.some(liq => liq.liquid === liquid) : false) :
-            list.some(recipe => recipe.outputLiq ? recipe.outputLiq.some(liq => liq.liquid === liquid) : false);
+            list.some(recipe => recipe.inputLiq ? recipe.inputLiq.some(liq => liq && liq.liquid === liquid) : false) :
+            list.some(recipe => recipe.outputLiq ? recipe.outputLiq.some(liq => liq && liq.liquid === liquid) : false);
     }
 
     onOpen(elements: java.util.HashMap<string, UI.Element>, recipe: RecipePattern): void {

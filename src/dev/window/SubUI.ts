@@ -117,7 +117,7 @@ class SubUI {
                         const target = SubUI.getTarget();
                         const key = target.tray[elem.y / 1000 | 0];
                         const recipeType = RecipeTypeRegistry.get(key);
-                        recipeType && recipeType.getAllList && SubUI.openWindow(key);
+                        recipeType && SubUI.openWindow(key);
                     }
                 }
             };
@@ -232,11 +232,10 @@ class SubUI {
 
         const trayWindow = this.window.getWindow("tray");
         const target = this.getTarget();
-        const tray = typeof target === "string" ? [target] : target.tray;
 
-        this.select = tray[index];
+        this.select = target.tray[index];
         trayWindow.getElements().get("cursor").setPosition(0, index * 1000);
-        trayWindow.getLocation().setScroll(0, tray.length * 60);
+        trayWindow.getLocation().setScroll(0, target.tray.length * 60);
 
         const recipeType = RecipeTypeRegistry.get(this.select);
         this.window.addWindowInstance("custom", recipeType.getWindow());
