@@ -77,5 +77,5 @@ declare interface RecipeViewerAPI {
     RecipeTypeRegistry: RecipeTypeRegistry;
 }
 declare namespace ModAPI {
-    function registerAPI(apiName: "RecipeViewer", func: (api: RecipeViewerAPI) => void): void;
+    function addAPICallback(apiName: "RecipeViewer", func: (api: RecipeViewerAPI) => void): void;
 }
