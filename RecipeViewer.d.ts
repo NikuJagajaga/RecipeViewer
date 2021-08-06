@@ -49,8 +49,13 @@ declare interface RecipeViewerOld {
     openRecipePage(key: string, container: UI.Container): void;
     putButtonOnNativeGui(screen: string, key: string): void;
 }
+declare interface RecipeContents {
+    params?: UI.BindingsSet,
+    drawing?: UI.DrawingSet,
+    elements: {[key: string]: Partial<UI.UIElement>};
+}
 declare abstract class RecipeType {
-    constructor(name: string, icon: number | Tile, content: {params?: UI.BindingsSet, drawing?: UI.DrawingSet, elements: {[key: string]: Partial<UI.UIElement>}});
+    constructor(name: string, icon: number | Tile, content: RecipeContents);
     setDescription(text: string): this;
     setTankLimit(limit: number): this;
     abstract getAllList(): RecipePattern[];
