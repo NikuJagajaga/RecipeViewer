@@ -63,7 +63,15 @@ declare abstract class RecipeType {
     onOpen(elements: java.util.HashMap<string, UI.Element>, recipe: RecipePattern): void;
 }
 declare interface RecipeTypeRegistry {
+    readonly types: {[key: string]: RecipeType};
     register(key: string, recipeType: RecipeType): void;
+    get(key: string): RecipeType;
+    isExist(key: string): boolean;
+    delete(key: string): void;
+    getLength(): number;
+    getActiveType(id: number, data: number, isUsage: boolean): string[];
+    getActiveTypeByLiquid(liquid: string, isUsage: boolean): string[];
+    openRecipePage(key: string): void;
 }
 declare interface ItemList {
     get(): ItemInfo[];
