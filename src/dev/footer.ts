@@ -61,5 +61,6 @@ ModAPI.registerAPI("RecipeViewer", {
 	Core: OldVersion,
     ItemList: ItemList,
     RecipeType: RecipeType,
-    RecipeTypeRegistry: RecipeTypeRegistry
+    RecipeTypeRegistry: RecipeTypeRegistry,
+    requireGlobal: (command: string) => eval(command)
 });
