@@ -126,23 +126,20 @@ class BrewingRecipe extends RecipeType {
 
     })();
 
-    static getName(meta: number): string {
-        return Item.getName(VanillaItemID.potion, meta).replace(" Potion", "").replace("Potion of ", "");
-    }
-
     constructor(){
+        const font = {size: 30, color: Color.WHITE, shadow: 0.5, align: UI.Font.ALIGN_CENTER};
         super("Potion Brewing", VanillaBlockID.brewing_stand, {
             params: {slot: "classic_slot"},
             drawing: [
-                {type: "bitmap", x: 68, y: 60, scale: 4, bitmap: "brewing_stand_back"}
+                {type: "bitmap", x: 68, y: 60, scale: 4, bitmap: "brewing_stand_back"},
+                {type: "text", x: 244 + 64, y: 440, text: "Source", font: font},
+                {type: "text", x: 628 + 64, y: 440, text: "Result", font: font}
             ],
             elements: {
                 input0: {x: 68, y: 60, size: 128},
                 input1: {x: 436, y: 68, size: 128},
                 input2: {x: 244, y: 276, size: 128},
-                output0: {x: 628, y: 276, size: 128},
-                text1: {type: "text", x: 372, y: 420, font: {size: 30, color: Color.WHITE, shadow: 0.5, alignment: UI.Font.ALIGN_END}},
-                text2: {type: "text", x: 628, y: 420, font: {size: 30, color: Color.WHITE, shadow: 0.5}}
+                output0: {x: 628, y: 276, size: 128}
             }
         });
     }
@@ -150,11 +147,6 @@ class BrewingRecipe extends RecipeType {
     getAllList(): RecipePattern[] {
         return BrewingRecipe.recipeListOld;
         //return isLegacy ? BrewingRecipe.recipeListOld : BrewingRecipe.recipeList;
-    }
-
-    onOpen(elements: java.util.HashMap<string, UI.Element>, recipe: RecipePattern): void {
-        elements.get("text1").setBinding("text", BrewingRecipe.getName(recipe.input[2].data));
-        elements.get("text2").setBinding("text", BrewingRecipe.getName(recipe.output[0].data));
     }
 
 }

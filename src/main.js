@@ -25,13 +25,10 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 var Color = android.graphics.Color;
-var ScreenWidth = 1000;
 var ScreenHeight = UI.getScreenHeight();
-var Context = UI.getContext();
 var isLegacy = getMCPEVersion().array[1] === 11;
-var ViewMode = { ITEM: 0, LIQUID: 1, ALL: 2 };
+var Math_clamp = function (value, min, max) { return Math.min(Math.max(value, min), max); };
 var removeDuplicateFilterFunc = function (item1, index, array) { return array.findIndex(function (item2) { return item1.id === item2.id && item1.data === item2.data && item1.type === item2.type; }) === index; };
-var setLoadingTip = ModAPI.requireGlobal("MCSystem.setLoadingTip");
 var isBlockID = function (id) {
     var info = IDRegistry.getIdInfo(id);
     return info && info.startsWith("block");
@@ -39,6 +36,19 @@ var isBlockID = function (id) {
 var isItemID = function (id) {
     var info = IDRegistry.getIdInfo(id);
     return info && info.startsWith("item");
+};
+var Context = UI.getContext();
+var runOnUiThread = function (func) {
+    Context.runOnUiThread(new java.lang.Runnable({
+        run: function () {
+            try {
+                func();
+            }
+            catch (e) {
+                alert(e);
+            }
+        }
+    }));
 };
 var BehaviorTools = /** @class */ (function () {
     function BehaviorTools() {
@@ -249,7 +259,7 @@ var ItemList = /** @class */ (function () {
     };
     ItemList.setup = function () {
         var _this = this;
-        this.list = this.list.filter(function (item) { return Item.isValid(item.id); }).filter(removeDuplicateFilterFunc);
+        this.list = this.list.filter(function (item) { return Item.isValid(item.id, item.data); }).filter(removeDuplicateFilterFunc);
         this.list.forEach(function (item) {
             item.name = _this.getName(item.id, item.data);
         });
@@ -257,6 +267,130 @@ var ItemList = /** @class */ (function () {
     ItemList.list = [];
     return ItemList;
 }());
+var UiFuncs;
+(function (UiFuncs) {
+    UiFuncs.slotClicker = {
+        onClick: function (container, tile, elem) {
+            SubUI.openItemView(elem.source.id, elem.source.data, false) && UiFuncs.show404Anim(elem);
+        },
+        onLongClick: function (container, tile, elem) {
+            SubUI.openItemView(elem.source.id, elem.source.data, true) && UiFuncs.show404Anim(elem);
+        }
+    };
+    UiFuncs.tankClicker = {
+        onClick: function (container, tile, elem) {
+            SubUI.openLiquidView(RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + ""), false) && UiFuncs.show404Anim(elem);
+        },
+        onLongClick: function (container, tile, elem) {
+            SubUI.openLiquidView(RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + ""), true) && UiFuncs.show404Anim(elem);
+        }
+    };
+    UiFuncs.genOverlayWindow = function () {
+        var window = new UI.Window({
+            location: { x: 0, y: 0, width: 1000, height: ScreenHeight },
+            drawing: [{ type: "background", color: Color.TRANSPARENT }],
+            elements: {
+                popupFrame: {
+                    type: "scale",
+                    x: -1000,
+                    y: -1000,
+                    width: 64,
+                    height: 64,
+                    scale: 3,
+                    bitmap: "workbench_frame3",
+                    value: 1
+                },
+                popupText: {
+                    type: "text",
+                    x: -1000,
+                    y: -1000,
+                    z: 1,
+                    font: { color: Color.WHITE, size: 24, shadow: 0.5, align: UI.Font.ALIGN_CENTER }
+                },
+                notFound: {
+                    type: "text",
+                    x: -1000,
+                    y: -1000,
+                    text: "404",
+                    font: { color: Color.RED, size: 32, shadow: 0.5, align: UI.Font.ALIGN_CENTER }
+                }
+            }
+        });
+        window.setTouchable(false);
+        window.setAsGameOverlay(true);
+        window.setEventListener({
+            onOpen: function (win) {
+                var elems = win.getElements();
+                elems.get("popupText").setPosition(-1000, -1000);
+                elems.get("popupFrame").setPosition(-1000, -1000);
+                elems.get("notFound").setPosition(-1000, -1000);
+            }
+        });
+        return window;
+    };
+    UiFuncs.moveOverlayOnTop = function (winGroup) {
+        if (!winGroup.isOpened()) {
+            winGroup.moveOnTop("overlay");
+            return;
+        }
+        var ovl = winGroup.getWindow("overlay");
+        ovl.setParentWindow(null);
+        ovl.close();
+        ovl.setParentWindow(winGroup);
+        ovl.open();
+    };
+    UiFuncs.popupTips = function (str, elem, event) {
+        var elements = elem.window.getParentWindow().getElements();
+        var text = elements.get("popupText");
+        var frame = elements.get("popupFrame");
+        if (str && event.type == "MOVE") {
+            var frameTex = UI.FrameTextureSource.get("workbench_frame3");
+            var width = McFontPaint.measureText(str) + 30;
+            var location = elem.window.getLocation();
+            var x = location.x + location.windowToGlobal(event.x);
+            var y = location.y + location.windowToGlobal(event.y);
+            frame.setSize(width, 48);
+            frame.setBinding("texture", frameTex.expandAndScale(width, 48, 3, frameTex.getCentralColor()));
+            frame.setPosition(Math_clamp(x - width / 2, 0, 1000 - width), Math.max(y - 100, 0));
+            text.setPosition(Math_clamp(x, width / 2, 1000 - width / 2), Math.max(y - 100, 0) - 3);
+            text.setBinding("text", str);
+        }
+        else {
+            frame.setPosition(-1000, -1000);
+            text.setPosition(-1000, -1000);
+        }
+    };
+    UiFuncs.onTouchSlot = function (elem, event) {
+        UiFuncs.popupTips(elem.source.id !== 0 ? ItemList.getName(elem.source.id, elem.source.data) : "", elem, event);
+    };
+    UiFuncs.onTouchTank = function (elem, event) {
+        var liquid = RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + "");
+        UiFuncs.popupTips(LiquidRegistry.isExists(liquid) ? LiquidRegistry.getLiquidName(liquid) : "", elem, event);
+    };
+    UiFuncs.show404Anim = function (elem) {
+        var window = elem.window.getParentWindow();
+        var text = window.getElements().get("notFound");
+        var location = elem.window.getLocation();
+        var x = location.x + location.windowToGlobal(elem.elementRect.centerX());
+        var y = location.y + location.windowToGlobal(elem.elementRect.centerY()) - 32;
+        Threading.initThread("rv_404Anim", function () {
+            var step = 0;
+            while (window.isOpened() && step <= 3) {
+                step & 1 ? text.setPosition(-1000, -1000) : text.setPosition(x, y);
+                step++;
+                java.lang.Thread.sleep(200);
+            }
+        });
+    };
+})(UiFuncs || (UiFuncs = {}));
+var McFontPaint = (function () {
+    var NativeAPI = ModAPI.requireGlobal("requireMethodFromNativeAPI");
+    var getMcTypeface = NativeAPI("utils.FileTools", "getMcTypeface");
+    var paint = new android.graphics.Paint();
+    paint.setTypeface(getMcTypeface());
+    paint.setTextSize(24);
+    return paint;
+})();
 var RecipeType = /** @class */ (function () {
     function RecipeType(name, icon, content) {
         this.name = name;
@@ -267,8 +401,8 @@ var RecipeType = /** @class */ (function () {
         content.params.slot = content.params.slot || "_default_slot_light";
         content.drawing = content.drawing || [];
         content.drawing.some(function (elem) { return elem.type === "background"; }) || content.drawing.unshift({ type: "background", color: Color.TRANSPARENT });
-        var templateSlot = { type: "slot", visual: true, clicker: RecipeType.slotClicker };
-        var templateTank = { type: "scale", clicker: RecipeType.tankClicker, direction: 1 };
+        var templateSlot = { type: "slot", visual: true, clicker: UiFuncs.slotClicker, onTouchEvent: UiFuncs.onTouchSlot };
+        var templateTank = { type: "scale", direction: 1, clicker: UiFuncs.tankClicker, onTouchEvent: UiFuncs.onTouchTank };
         var isInputSlot;
         var isOutputSlot;
         var isInputTank;
@@ -294,7 +428,7 @@ var RecipeType = /** @class */ (function () {
             }
         }
         //@ts-ignore
-        this.window.setContent({ location: { x: 230, y: 80, width: 600, height: 340 }, params: content.params, drawing: content.drawing, elements: content.elements });
+        this.window.setContent({ location: { x: 230, y: 55, width: 600, height: 340 }, params: content.params, drawing: content.drawing, elements: content.elements });
         var elements = this.window.getElements();
         for (var i = 0; i < inputSlotSize; i++) {
             this.elems.input[i] = elements.get("input" + i);
@@ -390,32 +524,6 @@ var RecipeType = /** @class */ (function () {
             }
         });
     };
-    RecipeType.getLiquidByTex = function (texture) {
-        for (var key in LiquidRegistry.liquids) {
-            if (LiquidRegistry.liquids[key].uiTextures.some(function (tex) {
-                return tex === texture;
-            })) {
-                return key;
-            }
-        }
-        return "";
-    };
-    RecipeType.slotClicker = {
-        onClick: function (container, tile, elem) {
-            SubUI.openWindow({ id: elem.source.id, data: elem.source.data }, false);
-        },
-        onLongClick: function (container, tile, elem) {
-            SubUI.openWindow({ id: elem.source.id, data: elem.source.data }, true);
-        }
-    };
-    RecipeType.tankClicker = {
-        onClick: function (container, tile, elem) {
-            SubUI.openWindow(RecipeType.getLiquidByTex(elem.getBinding("texture") + ""), false);
-        },
-        onLongClick: function (container, tile, elem) {
-            SubUI.openWindow(RecipeType.getLiquidByTex(elem.getBinding("texture") + ""), true);
-        }
-    };
     return RecipeType;
 }());
 var RecipeTypeRegistry = /** @class */ (function () {
@@ -433,8 +541,11 @@ var RecipeTypeRegistry = /** @class */ (function () {
     RecipeTypeRegistry.delete = function (key) {
         delete this.types[key];
     };
+    RecipeTypeRegistry.getAllKeys = function () {
+        return Object.keys(this.types);
+    };
     RecipeTypeRegistry.getLength = function () {
-        return Object.keys(this.types).length;
+        return this.getAllKeys().length;
     };
     RecipeTypeRegistry.getActiveType = function (id, data, isUsage) {
         var array = [];
@@ -462,8 +573,18 @@ var RecipeTypeRegistry = /** @class */ (function () {
         }
         return array;
     };
-    RecipeTypeRegistry.openRecipePage = function (key) {
-        SubUI.openWindow(key);
+    RecipeTypeRegistry.openRecipePage = function (recipeKey) {
+        SubUI.openListView(typeof recipeKey === "string" ? [recipeKey] : recipeKey);
+    };
+    RecipeTypeRegistry.getLiquidByTex = function (texture) {
+        for (var key in LiquidRegistry.liquids) {
+            if (LiquidRegistry.liquids[key].uiTextures.some(function (tex) {
+                return tex === texture;
+            })) {
+                return key;
+            }
+        }
+        return "";
     };
     RecipeTypeRegistry.types = {};
     return RecipeTypeRegistry;
@@ -636,57 +757,67 @@ Callback.addCallback("NativeGuiChanged", function (screen) {
 var MainUI = /** @class */ (function () {
     function MainUI() {
     }
+    MainUI.switchWindow = function (liquidMode, force) {
+        if (!force && this.liquidMode === liquidMode) {
+            return;
+        }
+        this.liquidMode = liquidMode;
+        this.page = 0;
+        this.window.addWindowInstance("list", liquidMode ? this.listWindow.liquid : this.listWindow.item);
+        UiFuncs.moveOverlayOnTop(this.window);
+        this.updateWindow();
+    };
     MainUI.changeSortMode = function (notChange) {
+        var elements = this.window.getElements();
         notChange || this.currentSortMode++;
         this.currentSortMode %= this.sortMode.length;
         var mode = this.sortMode[this.currentSortMode];
-        this.elements.get("textSort").onBindingUpdated("text", mode.text);
+        elements.get("textSort").setBinding("text", mode.text);
         this.list.sort(this.sortFunc[mode.type]);
         mode.reverse && this.list.reverse();
         this.page = 0;
-        this.updateWindow();
     };
     MainUI.updateWindow = function () {
-        var _this = this;
+        var elements = this.window.getElements();
+        var maxPage = this.liquidMode ? (this.liqList.length / this.tankCount | 0) + 1 : (this.list.length / this.slotCount | 0) + 1;
+        this.page = this.page < 0 ? maxPage - 1 : this.page >= maxPage ? 0 : this.page;
+        elements.get("textPage").setBinding("text", (this.page + 1) + " / " + maxPage);
         if (this.liquidMode) {
-            this.listWindow.liquid.isOpened() || this.window.addWindowInstance("list", this.listWindow.liquid);
-            this.listWindow.item.close();
-            var maxPage = (this.liqList.length / 8 | 0) + 1;
-            this.page = this.page < 0 ? maxPage - 1 : this.page >= maxPage ? 0 : this.page;
-            this.elements.get("textPage").setBinding("text", (this.page + 1) + " / " + maxPage);
-            this.elemTanks.forEach(function (elem, i) {
-                var liquid = _this.liqList[8 * _this.page + i];
+            elements = this.listWindow.liquid.getElements();
+            var elem = void 0;
+            var liquid = void 0;
+            for (var i = 0; i < this.tankCount; i++) {
+                elem = elements.get("tank" + i);
+                liquid = this.liqList[this.tankCount * this.page + i];
                 if (liquid) {
                     elem.setBinding("texture", LiquidRegistry.getLiquidUITexture(liquid, elem.elementRect.width(), elem.elementRect.height()));
                     elem.setBinding("value", 1);
                 }
                 else {
+                    elem.setBinding("texture", "");
                     elem.setBinding("value", 0);
                 }
-            });
+            }
         }
         else {
-            this.listWindow.item.isOpened() || this.window.addWindowInstance("list", this.listWindow.item);
-            this.listWindow.liquid.close();
-            var maxPage = (this.list.length / this.slotCount | 0) + 1;
-            this.page = this.page < 0 ? maxPage - 1 : this.page >= maxPage ? 0 : this.page;
-            this.elements.get("textPage").setBinding("text", (this.page + 1) + " / " + maxPage);
-            this.elemSlots.forEach(function (elem, i) {
-                var item = _this.list[_this.slotCount * _this.page + i];
-                elem.setBinding("source", item ? { id: item.id, count: 1, data: item.data } : { id: 0, count: 0, data: 0 });
-            });
+            elements = this.listWindow.item.getElements();
+            var item = void 0;
+            for (var i = 0; i < this.slotCount; i++) {
+                item = this.list[this.slotCount * this.page + i];
+                elements.get("slot" + i).setBinding("source", item ? { id: item.id, count: 1, data: item.data } : { id: 0, count: 0, data: 0 });
+            }
         }
     };
     MainUI.openWindow = function (list) {
         if (list === void 0) { list = ItemList.get(); }
         this.list = list;
         this.liqList = Object.keys(LiquidRegistry.liquids);
-        this.page = 0;
-        this.liquidMode = false;
         this.window.open();
         this.changeSortMode(true);
+        this.switchWindow(false, true);
     };
-    MainUI.slotCountX = 12;
+    var _a;
+    _a = MainUI;
     MainUI.page = 0;
     MainUI.list = [];
     MainUI.liquidMode = false;
@@ -712,50 +843,74 @@ var MainUI = /** @class */ (function () {
             return a.name > b.name ? 1 : -1;
         }
     };
-    MainUI.slotCount = (function () {
-        var slotSize = 960 / MainUI.slotCountX;
-        var slotCount = 0;
+    MainUI.slotCountX = 12;
+    MainUI.slotCountY = (function () {
+        var slotSize = 960 / _a.slotCountX;
+        var slotCountY = 0;
         for (var y = 68; y <= ScreenHeight - 80 - slotSize; y += slotSize) {
-            slotCount += MainUI.slotCountX;
+            slotCountY++;
         }
-        return slotCount;
+        return slotCountY;
     })();
+    MainUI.slotCount = _a.slotCountX * _a.slotCountY;
+    MainUI.tankCount = 8;
     MainUI.listWindow = (function () {
-        var slotSizeGlobal = 960 / MainUI.slotCountX;
-        var slotSize = 1000 / MainUI.slotCountX;
-        var height = MainUI.slotCount / MainUI.slotCountX * slotSizeGlobal;
+        var width = 960;
+        var height = _a.slotCountY * (960 / _a.slotCountX);
+        var location = {
+            x: 20,
+            y: 68,
+            width: width,
+            height: height,
+        };
+        var slotSize = 1000 / _a.slotCountX;
         var elemSlot = {};
-        for (var i = 0; i < MainUI.slotCount; i++) {
+        for (var i = 0; i < _a.slotCount; i++) {
             elemSlot["slot" + i] = {
                 type: "slot",
-                x: (i % MainUI.slotCountX) * slotSize, y: (i / MainUI.slotCountX | 0) * slotSize, size: slotSize,
+                x: (i % _a.slotCountX) * slotSize,
+                y: (i / _a.slotCountX | 0) * slotSize,
+                size: slotSize,
                 visual: true,
-                clicker: RecipeType.slotClicker
+                clicker: UiFuncs.slotClicker,
+                onTouchEvent: UiFuncs.onTouchSlot
             };
         }
+        var bgColor = UI.FrameTextureSource.get("classic_frame_slot").getCentralColor();
         var winSlot = new UI.Window({
-            location: { x: 20, y: 68, width: 960, height: height },
+            location: location,
             params: { slot: "_default_slot_empty" },
             drawing: [
-                { type: "background", color: Color.TRANSPARENT }
+                { type: "background", color: bgColor }
             ],
             elements: elemSlot
         });
-        var drawTank = [{ type: "background", color: Color.TRANSPARENT }];
+        var drawTank = [{ type: "background", color: bgColor }];
         var elemTank = {};
-        for (var i = 0; i < 8; i++) {
-            drawTank.push({ type: "frame", x: 30 + i * 120, y: 50, width: 100, height: height - 100, bitmap: "default_container_frame", scale: 3 });
+        for (var i = 0; i < _a.tankCount; i++) {
+            drawTank.push({
+                type: "frame",
+                x: 30 + i * 120,
+                y: 50,
+                width: 100,
+                height: height - 100,
+                bitmap: "default_container_frame",
+                scale: 3
+            });
             elemTank["tank" + i] = {
                 type: "scale",
-                x: 33 + i * 120, y: 53,
-                width: 94, height: height - 106,
+                x: 33 + i * 120,
+                y: 53,
+                width: 94,
+                height: height - 106,
                 bitmap: "_liquid_water_texture_0",
                 value: 1,
-                clicker: RecipeType.tankClicker
+                clicker: UiFuncs.tankClicker,
+                onTouchEvent: UiFuncs.onTouchTank
             };
         }
         var winTank = new UI.Window({
-            location: { x: 20, y: 68, width: 960, height: height },
+            location: location,
             drawing: drawTank,
             elements: elemTank
         });
@@ -773,33 +928,29 @@ var MainUI = /** @class */ (function () {
                 type: "button",
                 x: 20, y: 16, scale: 0.8,
                 bitmap: "mod_browser_search_field",
-                clicker: { onClick: function () {
-                        Context.runOnUiThread(new java.lang.Runnable({
-                            run: function () {
-                                try {
-                                    var editText_1 = new android.widget.EditText(Context);
-                                    editText_1.setHint("in this space");
-                                    new android.app.AlertDialog.Builder(Context)
-                                        .setTitle("Please type the keywords")
-                                        .setView(editText_1)
-                                        .setPositiveButton("Search", new android.content.DialogInterface.OnClickListener({
-                                        onClick: function () {
-                                            var keyword = editText_1.getText() + "";
-                                            var regexp = new RegExp(keyword, "i");
-                                            MainUI.elements.get("textSearch").setBinding("text", keyword.length ? keyword : "Search");
-                                            MainUI.list = ItemList.get().filter(function (item) { return item.name.match(regexp); });
-                                            MainUI.liqList = Object.keys(LiquidRegistry.liquids).filter(function (liquid) { return LiquidRegistry.getLiquidName(liquid).match(regexp); });
-                                            MainUI.page = 0;
-                                            MainUI.updateWindow();
-                                        }
-                                    })).show();
+                clicker: {
+                    onClick: function () {
+                        runOnUiThread(function () {
+                            var editText = new android.widget.EditText(Context);
+                            editText.setHint("in this space");
+                            new android.app.AlertDialog.Builder(Context)
+                                .setTitle("Please type the keywords")
+                                .setView(editText)
+                                .setPositiveButton("Search", new android.content.DialogInterface.OnClickListener({
+                                onClick: function () {
+                                    var elements = _a.window.getElements();
+                                    var keyword = editText.getText() + "";
+                                    var regexp = new RegExp(keyword, "i");
+                                    elements.get("textSearch").setBinding("text", keyword.length ? keyword : "Search");
+                                    _a.list = ItemList.get().filter(function (item) { return item.name.match(regexp); });
+                                    _a.liqList = Object.keys(LiquidRegistry.liquids).filter(function (liquid) { return LiquidRegistry.getLiquidName(liquid).match(regexp); });
+                                    _a.page = 0;
+                                    _a.updateWindow();
                                 }
-                                catch (e) {
-                                    alert(e);
-                                }
-                            }
-                        }));
-                    } }
+                            })).show();
+                        });
+                    }
+                }
             },
             textSearch: {
                 type: "text",
@@ -812,7 +963,8 @@ var MainUI = /** @class */ (function () {
                 x: 450, y: 16, scale: 0.8,
                 bitmap: "mod_browser_button", bitmap2: "mod_browser_button_down",
                 clicker: { onClick: function () {
-                        MainUI.changeSortMode();
+                        _a.changeSortMode();
+                        _a.updateWindow();
                     } }
             },
             textSort: {
@@ -822,50 +974,46 @@ var MainUI = /** @class */ (function () {
                 font: { color: Color.WHITE, size: 16, shadow: 0.5 }
             },
             switchMode: { type: "switch", x: 753, y: 20, scale: 2, onNewState: function (state) {
-                    if (World.isWorldLoaded()) {
-                        MainUI.liquidMode = state;
-                        MainUI.page = 0;
-                        MainUI.updateWindow();
-                    }
+                    World.isWorldLoaded() && _a.switchWindow(!!state);
                 } }
         };
-        var slotSize = 960 / MainUI.slotCountX;
+        var slotSize = 960 / _a.slotCountX;
         elements.buttonPrev = {
             type: "button",
             x: 20, y: ScreenHeight - 60, scale: 2,
             bitmap: "_button_prev_48x24", bitmap2: "_button_prev_48x24p",
-            clicker: { onClick: function () {
-                    MainUI.page--;
-                    MainUI.updateWindow();
-                } }
+            clicker: {
+                onClick: function () {
+                    _a.page--;
+                    _a.updateWindow();
+                }
+            }
         };
         elements.buttonNext = {
             type: "button",
             x: 884, y: ScreenHeight - 60, scale: 2,
             bitmap: "_button_next_48x24", bitmap2: "_button_next_48x24p",
-            clicker: { onClick: function () {
-                    MainUI.page++;
-                    MainUI.updateWindow();
-                } }
+            clicker: {
+                onClick: function () {
+                    _a.page++;
+                    _a.updateWindow();
+                }
+            }
         };
         elements.textPage = { type: "text", x: 490, y: ScreenHeight - 80, font: { size: 40, align: UI.Font.ALIGN_CENTER } };
         window.addWindow("controller", {
-            location: {
-                padding: {
-                    left: __config__.getNumber("Padding.left"),
-                    right: __config__.getNumber("Padding.right")
-                }
-            },
+            location: { x: 0, y: 0, width: 1000, height: ScreenHeight },
             drawing: [
                 { type: "background", color: Color.TRANSPARENT },
-                { type: "frame", x: 0, y: 0, width: ScreenWidth, height: ScreenHeight, bitmap: "classic_frame_bg_light", scale: 3 },
-                { type: "frame", x: 20 - 3, y: 68 - 3, width: 16 * 60 + 6, height: MainUI.slotCount / MainUI.slotCountX * slotSize + 6, bitmap: "classic_frame_slot", scale: 3 },
+                { type: "frame", x: 0, y: 0, width: 1000, height: ScreenHeight, bitmap: "classic_frame_bg_light", scale: 3 },
+                { type: "frame", x: 20 - 3, y: 68 - 3, width: 960 + 6, height: _a.slotCountY * slotSize + 6, bitmap: "classic_frame_slot", scale: 3 },
                 { type: "text", x: 700, y: 43, text: "Item", font: { size: 20 } },
                 { type: "text", x: 820, y: 43, text: "Liquid", font: { size: 20 } }
             ],
             elements: elements
         });
-        window.addWindowInstance("list", MainUI.listWindow.item);
+        window.addWindowInstance("list", _a.listWindow.item);
+        window.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
         window.setBlockingBackground(true);
         window.setContainer(new UI.Container());
         window.getWindow("controller").setEventListener({
@@ -878,29 +1026,21 @@ var MainUI = /** @class */ (function () {
         });
         return window;
     })();
-    MainUI.elements = MainUI.window.getWindow("controller").getElements();
-    MainUI.elemSlots = (function () {
-        var array = [];
-        var elements = MainUI.listWindow.item.getElements();
-        for (var i = 0; i < MainUI.slotCount; i++) {
-            array[i] = elements.get("slot" + i);
-        }
-        return array;
-    })();
-    MainUI.elemTanks = (function () {
-        var array = [];
-        var elements = MainUI.listWindow.liquid.getElements();
-        for (var i = 0; i < 8; i++) {
-            array[i] = elements.get("tank" + i);
-        }
-        return array;
-    })();
     return MainUI;
 }());
+var ViewMode = {
+    ITEM: 0,
+    LIQUID: 1,
+    LIST: 2
+};
+var isItemView = function (a) { return a && a.mode === ViewMode.ITEM; };
+var isLiquidView = function (a) { return a && a.mode === ViewMode.LIQUID; };
+var isListView = function (a) { return a && a.mode === ViewMode.LIST; };
 var SubUI = /** @class */ (function () {
     function SubUI() {
     }
     SubUI.setupWindow = function () {
+        var _this = this;
         var recipeTypeLength = RecipeTypeRegistry.getLength();
         var elements = {};
         for (var i = 0; i < recipeTypeLength; i++) {
@@ -910,136 +1050,144 @@ var SubUI = /** @class */ (function () {
                 visual: true,
                 clicker: {
                     onClick: function (container, tile, elem) {
-                        elem.source.id && SubUI.changeWindow(elem.y / 1000 | 0);
+                        elem.source.id && _this.changeWindow(elem.y / 1000 | 0);
                     },
                     onLongClick: function (container, tile, elem) {
-                        var target = SubUI.getTarget();
-                        var key = target.tray[elem.y / 1000 | 0];
-                        var recipeType = RecipeTypeRegistry.get(key);
-                        recipeType && SubUI.openWindow(key);
+                        var view = _this.getView();
+                        var key = view.tray[elem.y / 1000 | 0];
+                        _this.openListView([key]);
                     }
+                },
+                /*
+                onTouchEvent: (elem, event) => {
+                    const view = this.getView();
+                    const key = view.tray[elem.y / 1000 | 0];
+                    RecipeType.onTouch.popup(RecipeTypeRegistry.isExist(key) ? RecipeTypeRegistry.get(key).getName() : "", elem, event);
                 }
+                */
             };
             elements["description" + i] = {
                 type: "text",
                 x: 500, y: i * 1000 + 600, z: 1,
-                font: { size: 160, color: Color.WHITE, shadow: 0.5, alignment: UI.Font.ALIGN_CENTER }
+                font: { size: 160, color: Color.WHITE, shadow: 0.5, align: UI.Font.ALIGN_CENTER }
             };
         }
         elements.cursor = { type: "image", x: 0, y: 0, z: 1, bitmap: "_selection", scale: 27.78 };
         this.window.addWindow("tray", {
             location: {
-                x: 150, y: 20,
-                width: 60, height: 400,
-                padding: { top: 20, bottom: ScreenHeight - 480 },
+                x: 150, y: 10,
+                width: 60, height: 460,
                 scrollY: recipeTypeLength * 60
             },
             params: { slot: "_default_slot_empty" },
             drawing: [{ type: "background", color: Color.parseColor("#474343") }],
             elements: elements
         });
+        this.window.moveOnTop("overlay");
     };
-    SubUI.getTarget = function () {
-        return this.cache[this.cache.length - 1];
+    SubUI.getView = function () {
+        return this.recent[this.recent.length - 1];
     };
-    SubUI.openWindow = function (search, isUsage) {
-        var target = this.getTarget();
-        if (typeof search === "string") {
-            if (isUsage === void 0) {
-                if (!RecipeTypeRegistry.isExist(search) || target && target.mode === ViewMode.ALL && target.recipe === search) {
-                    return;
-                }
-                if (RecipeTypeRegistry.get(search).getAllList().length > 0) {
-                    this.cache.push({ mode: ViewMode.ALL, recipe: search, tray: [search] });
-                }
-                else {
-                    alert("Recipe not found");
-                    return;
-                }
-            }
-            else {
-                var array = RecipeTypeRegistry.getActiveTypeByLiquid(search, isUsage);
-                if (array.length === 0) {
-                    alert("Recipe not found");
-                    return;
-                }
-                this.cache.push({ mode: ViewMode.LIQUID, liquid: search, isUsage: isUsage, tray: array });
-            }
+    SubUI.openItemView = function (id, data, isUsage) {
+        var currentView = this.getView();
+        if (id === 0 || isItemView(currentView) && currentView.id === id && currentView.data === data && currentView.isUsage === isUsage) {
+            return false;
         }
-        else {
-            if (isUsage === void 0 || search.id === 0 || target && typeof target !== "string" && target.id === search.id && target.data === search.data && target.isUsage === isUsage) {
-                return;
-            }
-            var array = RecipeTypeRegistry.getActiveType(search.id, search.data, isUsage);
-            if (array.length === 0) {
-                alert("Recipe not found");
-                return;
-            }
-            this.cache.push({ mode: ViewMode.ITEM, id: search.id, data: search.data, isUsage: isUsage, tray: array });
+        var array = RecipeTypeRegistry.getActiveType(id, data, isUsage);
+        if (array.length === 0) {
+            return true;
         }
+        var view = { mode: ViewMode.ITEM, id: id, data: data, isUsage: isUsage, tray: array };
+        this.recent.push(view);
+        this.page = 0;
+        this.updateWindow();
+        this.window.open();
+        return false;
+    };
+    SubUI.openLiquidView = function (liquid, isUsage) {
+        var currentView = this.getView();
+        if (liquid === "" || isLiquidView(currentView) && currentView.liquid === liquid && currentView.isUsage === isUsage) {
+            return false;
+        }
+        var array = RecipeTypeRegistry.getActiveTypeByLiquid(liquid, isUsage);
+        if (array.length === 0) {
+            return true;
+        }
+        var view = { mode: ViewMode.LIQUID, liquid: liquid, isUsage: isUsage, tray: array };
+        this.recent.push(view);
+        this.page = 0;
+        this.updateWindow();
+        this.window.open();
+        return false;
+    };
+    SubUI.openListView = function (recipes) {
+        var tray = recipes.filter(function (recipe) { return RecipeTypeRegistry.isExist(recipe) && RecipeTypeRegistry.get(recipe).getAllList().length > 0; });
+        if (tray.length === 0) {
+            return;
+        }
+        var view = { mode: ViewMode.LIST, tray: tray };
+        this.recent.push(view);
         this.page = 0;
         this.updateWindow();
         this.window.open();
     };
-    SubUI.updateWindow = function () {
-        var target = this.getTarget();
-        var name;
-        switch (target.mode) {
-            case ViewMode.ITEM:
-                name = ItemList.getName(target.id, target.data);
-                break;
-            case ViewMode.LIQUID:
-                name = LiquidRegistry.getLiquidName(target.liquid);
-                break;
-            case ViewMode.ALL:
-                name = RecipeTypeRegistry.get(target.recipe).getName();
-                break;
-        }
+    SubUI.setTitle = function () {
+        var view = this.getView();
         var elements = this.window.getWindow("controller").getElements();
-        elements.get("textRecipe").setBinding("text", target.mode !== ViewMode.ALL && !target.isUsage ? name : "");
-        elements.get("textUsage").setBinding("text", target.mode !== ViewMode.ALL && target.isUsage ? name : "");
-        elements.get("textAll").setBinding("text", target.mode === ViewMode.ALL ? name : "");
-        elements = this.window.getWindow("tray").getElements();
-        var length = RecipeTypeRegistry.getLength();
-        var recipeType;
-        for (var i = 0; i < length; i++) {
-            if (target.tray[i]) {
-                recipeType = RecipeTypeRegistry.get(target.tray[i]);
-                elements.get("icon" + i).setBinding("source", recipeType.getIcon());
-                elements.get("description" + i).setBinding("text", recipeType.getDescription());
+        var title = isItemView(view) ? ItemList.getName(view.id, view.data) :
+            isLiquidView(view) ? LiquidRegistry.getLiquidName(view.liquid) :
+                isListView(view) ? RecipeTypeRegistry.get(this.select).getName() : "";
+        elements.get("textRecipe").setBinding("text", !isListView(view) && !view.isUsage ? title : "");
+        elements.get("textUsage").setBinding("text", !isListView(view) && view.isUsage ? title : "");
+        elements.get("textAll").setBinding("text", isListView(view) ? title : "");
+    };
+    SubUI.updateWindow = function () {
+        try {
+            var elements = this.window.getWindow("tray").getElements();
+            var view = this.getView();
+            var length = RecipeTypeRegistry.getLength();
+            var recipeType = void 0;
+            var icon = void 0;
+            var description = void 0;
+            for (var i = 0; i < length; i++) {
+                icon = elements.get("icon" + i);
+                description = elements.get("description" + i);
+                if (view.tray[i]) {
+                    recipeType = RecipeTypeRegistry.get(view.tray[i]);
+                    icon.setBinding("source", recipeType.getIcon());
+                    description.setBinding("text", recipeType.getDescription());
+                }
+                else {
+                    icon.setBinding("source", { id: 0, count: 0, data: 0 });
+                    description.setBinding("text", "");
+                }
             }
-            else {
-                elements.get("icon" + i).setBinding("source", { id: 0, count: 0, data: 0 });
-                elements.get("description" + i).setBinding("text", "");
-            }
+            this.changeWindow(0);
         }
-        this.changeWindow(0);
+        catch (e) {
+            alert("up: " + e);
+        }
     };
     SubUI.changeWindow = function (index) {
         var trayWindow = this.window.getWindow("tray");
-        var target = this.getTarget();
-        this.select = target.tray[index];
+        var view = this.getView();
+        this.select = view.tray[index];
         trayWindow.getElements().get("cursor").setPosition(0, index * 1000);
-        trayWindow.getLocation().setScroll(0, target.tray.length * 60);
+        //trayWindow.getLocation().setScroll(0, view.tray.length * 60);
         var recipeType = RecipeTypeRegistry.get(this.select);
         this.window.addWindowInstance("custom", recipeType.getWindow());
+        UiFuncs.moveOverlayOnTop(this.window);
         try {
-            switch (target.mode) {
-                case ViewMode.ITEM:
-                    this.list = recipeType.getList(target.id, target.data, target.isUsage);
-                    break;
-                case ViewMode.LIQUID:
-                    this.list = recipeType.getListByLiquid(target.liquid, target.isUsage);
-                    break;
-                case ViewMode.ALL:
-                    this.list = recipeType.getAllList();
-                    break;
-            }
+            this.list =
+                isItemView(view) ? recipeType.getList(view.id, view.data, view.isUsage) :
+                    isLiquidView(view) ? recipeType.getListByLiquid(view.liquid, view.isUsage) :
+                        isListView(view) ? recipeType.getAllList() : [];
         }
         catch (e) {
             RecipeTypeRegistry.delete(this.select);
             alert('[RV] RecipeType "' + this.select + '" has been deleted.\n' + e);
         }
+        this.setTitle();
         this.turnPage(0, true);
     };
     SubUI.turnPage = function (page, force) {
@@ -1051,68 +1199,76 @@ var SubUI = /** @class */ (function () {
         this.page = page < 0 ? this.list.length : page >= this.list.length ? 0 : page;
         elements.get("scrollPage").setBinding("raw-value", java.lang.Float.valueOf(this.page / (this.list.length - 1)));
         elements.get("textPage").setBinding("text", (this.page + 1) + " / " + this.list.length);
-        var recipe = this.list[this.page];
-        recipeType.showRecipe(recipe);
+        recipeType.showRecipe(this.list[this.page]);
     };
+    var _a;
+    _a = SubUI;
     SubUI.page = 0;
     SubUI.list = [];
     SubUI.select = "";
-    SubUI.cache = [];
+    SubUI.recent = [];
     SubUI.window = (function () {
         var window = new UI.WindowGroup();
         window.addWindow("controller", {
-            location: { x: 140, y: 10, width: 720, height: 480 },
+            location: { x: 140, y: 0, width: 720, height: 480 },
             drawing: [
                 { type: "background", color: Color.TRANSPARENT },
-                { type: "frame", x: 0, y: 0, width: 1000, height: 666.7, bitmap: "default_frame_bg_light", scale: 2 }
+                { type: "frame", x: 0, y: 0, width: 1000, height: 666.7, bitmap: "default_frame_bg_light", scale: 4 }
             ],
             elements: {
                 textRecipe: { type: "text", x: 280, y: 20, font: { size: 40, color: Color.WHITE, shadow: 0.5 } },
                 textUsage: { type: "text", x: 280, y: 20, font: { size: 40, color: Color.GREEN, shadow: 0.5 } },
-                textAll: { type: "text", x: 280, y: 20, font: { size: 40, color: Color.YELLOW, shadow: 0.5 } },
+                textAll: { type: "text", x: 280, y: 20, font: { size: 40, color: Color.YELLOW, shadow: 0.5 }, clicker: {
+                        onClick: function (container, tile, elem) {
+                            _a.openListView(RecipeTypeRegistry.getAllKeys());
+                        }
+                    },
+                    onTouchEvent: function (elem, event) {
+                        UiFuncs.popupTips("Show All Recipes", elem, event);
+                    } },
                 buttonBack: {
                     type: "button",
                     x: 120, y: 15, scale: 3,
                     bitmap: "_craft_button_up", bitmap2: "_craft_button_down",
                     clicker: {
                         onClick: function () {
-                            SubUI.cache.pop();
-                            if (SubUI.cache.length) {
-                                SubUI.updateWindow();
+                            _a.recent.pop();
+                            if (_a.recent.length > 0) {
+                                _a.updateWindow();
                                 return;
                             }
-                            SubUI.window.close();
+                            _a.window.close();
                         },
                         onLongClick: function () {
-                            SubUI.cache.length = 0;
-                            SubUI.window.close();
+                            _a.recent.length = 0;
+                            _a.window.close();
                         }
                     }
                 },
                 textBack: { type: "text", x: 150, y: 25, z: 1, text: "Back", font: { color: Color.WHITE, size: 30, shadow: 0.5 } },
                 buttonPrev: {
                     type: "button",
-                    x: 150, y: 610, scale: 2,
+                    x: 250 - 48 * 2.5, y: 590, scale: 2.5,
                     bitmap: "_button_prev_48x24", bitmap2: "_button_prev_48x24p",
                     clicker: {
                         onClick: function () {
-                            SubUI.turnPage(SubUI.page - 1);
+                            _a.turnPage(_a.page - 1);
                         },
                         onLongClick: function () {
-                            SubUI.turnPage(0);
+                            _a.turnPage(0);
                         }
                     }
                 },
                 buttonNext: {
                     type: "button",
-                    x: 854, y: 610, scale: 2,
+                    x: 850, y: 590, scale: 2.5,
                     bitmap: "_button_next_48x24", bitmap2: "_button_next_48x24p",
                     clicker: {
                         onClick: function () {
-                            SubUI.turnPage(SubUI.page + 1);
+                            _a.turnPage(_a.page + 1);
                         },
                         onLongClick: function () {
-                            SubUI.turnPage(SubUI.list.length - 1);
+                            _a.turnPage(_a.list.length - 1);
                         }
                     }
                 },
@@ -1120,15 +1276,16 @@ var SubUI = /** @class */ (function () {
                     type: "scroll",
                     x: 350, y: 595, length: 400,
                     onTouchEvent: function (elem, event) {
-                        var len = SubUI.list.length - 1;
+                        var len = _a.list.length - 1;
                         var page = Math.round(event.localX * len);
-                        SubUI.turnPage(page);
+                        _a.turnPage(page);
                         event.localX = page / len;
                     }
                 },
                 textPage: { type: "text", x: 575, y: 535, font: { size: 40, align: UI.Font.ALIGN_CENTER } }
             }
         });
+        window.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
         window.setContainer(new UI.Container());
         window.setBlockingBackground(true);
         return window;
@@ -1138,11 +1295,8 @@ var SubUI = /** @class */ (function () {
 var RButton = /** @class */ (function () {
     function RButton() {
     }
-    RButton.putOnNativeGui = function (screenName, recipeTypeKey) {
-        var recipeType = RecipeTypeRegistry.get(recipeTypeKey);
-        if (recipeType) {
-            this.data[screenName] = recipeTypeKey;
-        }
+    RButton.putOnNativeGui = function (screenName, recipeKey) {
+        this.data[screenName] = typeof recipeKey === "string" ? [recipeKey] : recipeKey;
     };
     RButton.onNativeGuiChanged = function (screen) {
         this.currentScreen = screen;
@@ -1151,7 +1305,7 @@ var RButton = /** @class */ (function () {
     RButton.data = {};
     RButton.window = (function () {
         var window = new UI.Window({
-            location: { x: ScreenWidth - 128, y: ScreenHeight - 96, width: 64, height: 64 },
+            location: { x: 1000 - 128, y: ScreenHeight - 96, width: 64, height: 64 },
             elements: {
                 button: {
                     type: "button",
@@ -1159,8 +1313,8 @@ var RButton = /** @class */ (function () {
                     bitmap: "default_button_up", bitmap2: "default_button_down",
                     clicker: {
                         onClick: function () {
-                            var key = RButton.data[RButton.currentScreen];
-                            key && RecipeTypeRegistry.openRecipePage(key);
+                            var recipes = RButton.data[RButton.currentScreen];
+                            recipes && RecipeTypeRegistry.openRecipePage(recipes);
                         }
                     }
                 },
@@ -1201,34 +1355,37 @@ var WorkbenchRecipe = /** @class */ (function (_super) {
             }
         }) || this;
     }
-    WorkbenchRecipe.prototype.getAllList = function () {
-        return [];
-    };
-    WorkbenchRecipe.prototype.getList = function (id, data, isUsage) {
+    WorkbenchRecipe.prototype.convertToJSArray = function (set) {
         var list = [];
-        var data2 = Item.getMaxDamage(id) ? -1 : data;
-        var recipe = isUsage ? Recipes.getWorkbenchRecipesByIngredient(id, data2) : Recipes.getWorkbenchRecipesByResult(id, -1, data2);
-        var iterator = recipe.iterator();
-        var entry, field, result, input, chargeData;
+        var iterator = set.iterator();
+        var entry;
+        var field;
+        var input;
         var i = 0;
-        //let amount = 0;
         while (iterator.hasNext()) {
             entry = iterator.next();
-            result = entry.getResult();
             field = entry.getSortedEntries();
             input = [];
-            //chargeData = ChargeItemRegistry.getItemData(result.id);
             for (i = 0; i < 9; i++) {
                 if (!field[i]) {
                     break;
                 }
                 input[i] = { id: field[i].id, count: 1, data: field[i].data };
-                //amount += chargeData ? ChargeItemRegistry.getEnergyStored(field[i], chargeData.energy) : 0;
             }
-            //chargeData && chargeData.type != "extra" && result.count === 1 && ChargeItemRegistry.addEnergyTo(result, chargeData.energy, amount, amount, 100);
-            list.push({ input: input, output: [result] });
+            list.push({ input: input, output: [entry.getResult()] });
         }
         return list;
+    };
+    WorkbenchRecipe.prototype.getAllList = function () {
+        var recipes = new java.util.HashSet();
+        ItemList.get().forEach(function (item) {
+            recipes.addAll(Recipes.getWorkbenchRecipesByResult(item.id, -1, -1));
+        });
+        return this.convertToJSArray(recipes);
+    };
+    WorkbenchRecipe.prototype.getList = function (id, data, isUsage) {
+        var data2 = Item.getMaxDamage(id) ? -1 : data;
+        return this.convertToJSArray(isUsage ? Recipes.getWorkbenchRecipesByIngredient(id, data2) : Recipes.getWorkbenchRecipesByResult(id, -1, data2));
     };
     return WorkbenchRecipe;
 }(RecipeType));
@@ -1262,8 +1419,6 @@ var FurnaceRecipe = /** @class */ (function (_super) {
     };
     return FurnaceRecipe;
 }(RecipeType));
-RecipeTypeRegistry.register("furnace", new FurnaceRecipe());
-RButton.putOnNativeGui("furnace_screen", "furnace");
 var FurnaceFuelRecipe = /** @class */ (function (_super) {
     __extends(FurnaceFuelRecipe, _super);
     function FurnaceFuelRecipe() {
@@ -1280,7 +1435,7 @@ var FurnaceFuelRecipe = /** @class */ (function (_super) {
         return _this;
     }
     FurnaceFuelRecipe.prototype.getAllList = function () {
-        return [];
+        return ItemList.get().filter(function (item) { return Recipes.getFuelBurnDuration(item.id, item.data) > 0; }).map(function (item) { return ({ input: [{ id: item.id, count: 1, data: item.data }] }); });
     };
     FurnaceFuelRecipe.prototype.getList = function (id, data, isUsage) {
         return isUsage && Recipes.getFuelBurnDuration(id, data) > 0 ? [{ input: [{ id: id, count: 1, data: data }] }] : [];
@@ -1292,7 +1447,9 @@ var FurnaceFuelRecipe = /** @class */ (function (_super) {
     };
     return FurnaceFuelRecipe;
 }(RecipeType));
+RecipeTypeRegistry.register("furnace", new FurnaceRecipe());
 RecipeTypeRegistry.register("fuel", new FurnaceFuelRecipe());
+RButton.putOnNativeGui("furnace_screen", ["furnace", "fuel"]);
 var LikeFurnaceRecipe = /** @class */ (function (_super) {
     __extends(LikeFurnaceRecipe, _super);
     function LikeFurnaceRecipe(name, icon) {
@@ -1327,25 +1484,28 @@ var CampfireRecipe = new LikeFurnaceRecipe("Campfire", VanillaBlockID.campfire);
 RecipeTypeRegistry.register("blast_furnace", BlastFurnaceRecipe);
 RecipeTypeRegistry.register("smoker", SmokerRecipe);
 RecipeTypeRegistry.register("campfire", CampfireRecipe);
-RButton.putOnNativeGui("blast_furnace_screen", "blast_furnace");
-RButton.putOnNativeGui("smoker_screen", "smoker");
+RButton.putOnNativeGui("blast_furnace_screen", ["blast_furnace", "fuel"]);
+RButton.putOnNativeGui("smoker_screen", ["smoker", "fuel"]);
 var BrewingRecipe = /** @class */ (function (_super) {
     __extends(BrewingRecipe, _super);
     function BrewingRecipe() {
-        return _super.call(this, "Potion Brewing", VanillaBlockID.brewing_stand, {
+        var _this = this;
+        var font = { size: 30, color: Color.WHITE, shadow: 0.5, align: UI.Font.ALIGN_CENTER };
+        _this = _super.call(this, "Potion Brewing", VanillaBlockID.brewing_stand, {
             params: { slot: "classic_slot" },
             drawing: [
-                { type: "bitmap", x: 68, y: 60, scale: 4, bitmap: "brewing_stand_back" }
+                { type: "bitmap", x: 68, y: 60, scale: 4, bitmap: "brewing_stand_back" },
+                { type: "text", x: 244 + 64, y: 440, text: "Source", font: font },
+                { type: "text", x: 628 + 64, y: 440, text: "Result", font: font }
             ],
             elements: {
                 input0: { x: 68, y: 60, size: 128 },
                 input1: { x: 436, y: 68, size: 128 },
                 input2: { x: 244, y: 276, size: 128 },
-                output0: { x: 628, y: 276, size: 128 },
-                text1: { type: "text", x: 372, y: 420, font: { size: 30, color: Color.WHITE, shadow: 0.5, alignment: UI.Font.ALIGN_END } },
-                text2: { type: "text", x: 628, y: 420, font: { size: 30, color: Color.WHITE, shadow: 0.5 } }
+                output0: { x: 628, y: 276, size: 128 }
             }
         }) || this;
+        return _this;
     }
     BrewingRecipe.registerRecipe = function (input, reagent, output) {
         var inputItem = BehaviorTools.convertToItem(input);
@@ -1362,16 +1522,9 @@ var BrewingRecipe = /** @class */ (function (_super) {
             ]
         });
     };
-    BrewingRecipe.getName = function (meta) {
-        return Item.getName(VanillaItemID.potion, meta).replace(" Potion", "").replace("Potion of ", "");
-    };
     BrewingRecipe.prototype.getAllList = function () {
         return BrewingRecipe.recipeListOld;
         //return isLegacy ? BrewingRecipe.recipeListOld : BrewingRecipe.recipeList;
-    };
-    BrewingRecipe.prototype.onOpen = function (elements, recipe) {
-        elements.get("text1").setBinding("text", BrewingRecipe.getName(recipe.input[2].data));
-        elements.get("text2").setBinding("text", BrewingRecipe.getName(recipe.output[0].data));
     };
     BrewingRecipe.recipeList = [];
     BrewingRecipe.recipeListOld = (function () {
@@ -1530,10 +1683,10 @@ var TradingRecipe = /** @class */ (function (_super) {
                 input0: { x: 250, y: 190, size: 120 },
                 input1: { x: 370, y: 190, size: 120 },
                 output0: { x: 630, y: 190, size: 120 },
-                textCount0: { type: "text", x: 310, y: 310, font: { size: 30, color: Color.WHITE, shadow: 0.5, alignment: UI.Font.ALIGN_CENTER } },
-                textCount1: { type: "text", x: 430, y: 310, font: { size: 30, color: Color.WHITE, shadow: 0.5, alignment: UI.Font.ALIGN_CENTER } },
-                textInfo: { type: "text", x: 500, y: 80, font: { size: 40, color: Color.WHITE, shadow: 0.5, alignment: UI.Font.ALIGN_CENTER } },
-                textEnch: { type: "text", x: 690, y: 310, font: { size: 30, color: Color.GREEN, shadow: 0.5, alignment: UI.Font.ALIGN_CENTER } }
+                textCount0: { type: "text", x: 310, y: 310, font: { size: 30, color: Color.WHITE, shadow: 0.5, align: UI.Font.ALIGN_CENTER } },
+                textCount1: { type: "text", x: 430, y: 310, font: { size: 30, color: Color.WHITE, shadow: 0.5, align: UI.Font.ALIGN_CENTER } },
+                textInfo: { type: "text", x: 500, y: 80, font: { size: 40, color: Color.WHITE, shadow: 0.5, align: UI.Font.ALIGN_CENTER } },
+                textEnch: { type: "text", x: 690, y: 310, font: { size: 30, color: Color.GREEN, shadow: 0.5, align: UI.Font.ALIGN_CENTER } }
             }
         }) || this;
         _this.setDescription("Trade");
@@ -1552,13 +1705,12 @@ var TradingRecipe = /** @class */ (function (_super) {
         elements.get("textCount1").setBinding("text", recipe.quantity[1] ? recipe.quantity[1].min + "-" + recipe.quantity[1].max : "");
         elements.get("textEnch").setBinding("text", recipe.isEnchanted ? "Enchanted" : "");
     };
-    TradingRecipe.allTrade = (function () {
-        var list = [];
-        setLoadingTip("[RV]: Load Villager Trades");
+    TradingRecipe.setup = function () {
+        var _this = this;
         FileTools.GetListOfFiles(__packdir__ + "assets/behavior_packs/vanilla/trading/", ".json").forEach(function (file) {
             try {
                 var json = BehaviorTools.readJson(file.getAbsolutePath());
-                var jobName = TradingRecipe.convertToJobName(file.getName());
+                var jobName = _this.convertToJobName(file.getName());
                 var i = void 0;
                 var j = void 0;
                 var trade = void 0;
@@ -1580,7 +1732,7 @@ var TradingRecipe = /** @class */ (function (_super) {
                             input2 = amount2 = null;
                         }
                         output = BehaviorTools.convertToItem(trade.gives[0].item);
-                        input && output && list.push({
+                        input && output && _this.allTrade.push({
                             input: [
                                 { id: input.id, count: amount && typeof amount === "number" ? amount : 1, data: input.data },
                                 input2 ? { id: input2.id, count: amount2 && typeof amount2 === "number" ? amount2 : 1, data: input2.data } : { id: 0, count: 0, data: 0 }
@@ -1602,75 +1754,84 @@ var TradingRecipe = /** @class */ (function (_super) {
                 alert("[RV]: TradeJson\n" + e);
             }
         });
-        setLoadingTip("");
-        return list;
-    })();
+    };
+    TradingRecipe.allTrade = [];
     return TradingRecipe;
 }(RecipeType));
 RecipeTypeRegistry.register("trading", new TradingRecipe());
 RButton.putOnNativeGui("trade_screen", "trading");
 Callback.addCallback("PostLoaded", function () {
-    var x = __config__.getNumber("ButtonPosition.x");
-    var y = __config__.getNumber("ButtonPosition.y");
-    StartButton.getLocation().set(x < 0 ? ScreenWidth - (-x) : x, y < 0 ? ScreenHeight - (-y) : y, 64, 64);
-    ItemList.addVanillaItems();
-    if (isLegacy) {
-        BehaviorTools.readListOfJson(__packdir__ + "assets/definitions/recipe/").forEach(function (json) {
-            if (json.type === "furnace_recipe") {
-                for (var i = 0; i < json.tags.length; i++) {
-                    switch (json.tags[i]) {
-                        case "blast_furnace":
-                            BlastFurnaceRecipe.registerRecipe(json.input, json.output);
-                            break;
-                        case "smoker":
-                            SmokerRecipe.registerRecipe(json.input, json.output);
-                            break;
-                        case "campfire":
-                            CampfireRecipe.registerRecipe(json.input, json.output);
-                            break;
+    var x = __config__.getNumber("ButtonPosition.x").intValue();
+    var y = __config__.getNumber("ButtonPosition.y").intValue();
+    StartButton.getLocation().set(x < 0 ? 1000 - (-x) : x, y < 0 ? ScreenHeight - (-y) : y, 64, 64);
+    Threading.initThread("rv_readJson", function () {
+        var time = Debug.sysTime();
+        alert("[RV]: Start loading vanilla recipe Json");
+        ItemList.addVanillaItems();
+        TradingRecipe.setup();
+        if (isLegacy) {
+            BehaviorTools.readListOfJson(__packdir__ + "assets/definitions/recipe/").forEach(function (json) {
+                if (json.type === "furnace_recipe") {
+                    for (var i = 0; i < json.tags.length; i++) {
+                        switch (json.tags[i]) {
+                            case "blast_furnace":
+                                BlastFurnaceRecipe.registerRecipe(json.input, json.output);
+                                break;
+                            case "smoker":
+                                SmokerRecipe.registerRecipe(json.input, json.output);
+                                break;
+                            case "campfire":
+                                CampfireRecipe.registerRecipe(json.input, json.output);
+                                break;
+                        }
                     }
                 }
-            }
-            else if (json.type === "crafting_shapeless") {
-                json.tags.some(function (tag) { return tag === "stonecutter"; }) && StonecutterRecipe.registerRecipe(json.ingredients[0], json.result);
-            }
-        });
-    }
-    else {
-        BehaviorTools.readListOfJson(__packdir__ + "assets/behavior_packs/vanilla/recipes/").forEach(function (json) {
-            if (json["minecraft:recipe_furnace"]) {
-                var recipe = json["minecraft:recipe_furnace"];
-                for (var i = 0; i < recipe.tags.length; i++) {
-                    switch (recipe.tags[i]) {
-                        case "blast_furnace":
-                            BlastFurnaceRecipe.registerRecipe(recipe.input, recipe.output);
-                            break;
-                        case "smoker":
-                            SmokerRecipe.registerRecipe(recipe.input, recipe.output);
-                            break;
-                        case "campfire":
-                            CampfireRecipe.registerRecipe(recipe.input, recipe.output);
-                            break;
+                else if (json.type === "crafting_shapeless") {
+                    json.tags.some(function (tag) { return tag === "stonecutter"; }) && StonecutterRecipe.registerRecipe(json.ingredients[0], json.result);
+                }
+            });
+        }
+        else {
+            BehaviorTools.readListOfJson(__packdir__ + "assets/behavior_packs/vanilla/recipes/").forEach(function (json) {
+                if (json["minecraft:recipe_furnace"]) {
+                    var recipe = json["minecraft:recipe_furnace"];
+                    for (var i = 0; i < recipe.tags.length; i++) {
+                        switch (recipe.tags[i]) {
+                            case "blast_furnace":
+                                BlastFurnaceRecipe.registerRecipe(recipe.input, recipe.output);
+                                break;
+                            case "smoker":
+                                SmokerRecipe.registerRecipe(recipe.input, recipe.output);
+                                break;
+                            case "campfire":
+                                CampfireRecipe.registerRecipe(recipe.input, recipe.output);
+                                break;
+                        }
                     }
                 }
-            }
-            /*
-            else if(json["minecraft:recipe_brewing_mix"]){
-                const recipe = json["minecraft:recipe_brewing_mix"];
-                recipe.tags.some(tag => tag === "brewing_stand") && BrewingRecipe.registerRecipe(recipe.input, recipe.reagent, recipe.output);
-            }
-            */
-            else if (json["minecraft:recipe_shapeless"]) {
-                var recipe = json["minecraft:recipe_shapeless"];
-                recipe.tags.some(function (tag) { return tag === "stonecutter"; }) && StonecutterRecipe.registerRecipe(recipe.ingredients[0], recipe.result);
-            }
-        });
-    }
+                /*
+                else if(json["minecraft:recipe_brewing_mix"]){
+                    const recipe = json["minecraft:recipe_brewing_mix"];
+                    recipe.tags.some(tag => tag === "brewing_stand") && BrewingRecipe.registerRecipe(recipe.input, recipe.reagent, recipe.output);
+                }
+                */
+                else if (json["minecraft:recipe_shapeless"]) {
+                    var recipe = json["minecraft:recipe_shapeless"];
+                    recipe.tags.some(function (tag) { return tag === "stonecutter"; }) && StonecutterRecipe.registerRecipe(recipe.ingredients[0], recipe.result);
+                }
+            });
+        }
+        alert("[RV]: Finish! (" + (Debug.sysTime() - time) + " ms)");
+    });
 });
 Callback.addCallback("LevelLoaded", function () {
-    ItemList.addModItems();
-    ItemList.setup();
-    SubUI.setupWindow();
+    Threading.initThread("rv_setup", function () {
+        var time = Debug.sysTime();
+        ItemList.addModItems();
+        ItemList.setup();
+        SubUI.setupWindow();
+        Game.message("Recipe Viewer is ready (" + (Debug.sysTime() - time) + " ms)");
+    });
 });
 ModAPI.registerAPI("RecipeViewer", {
     Core: OldVersion,

@@ -15,6 +15,7 @@
 
         "api/BehaviorTools.ts",
         "api/ItemList.ts",
+        "api/UiFuncs.ts",
         "api/RecipeType.ts",
         "api/RecipeTypeRegistry.ts",
         "api/old.ts",
@@ -35,9 +36,8 @@
 
       ],
     "files": [
-        "../../../_MODULE_/android-declarations.d.ts",
-        "../../../_MODULE_/android.d.ts",
-        "../../../_MODULE_/core-engine.d.ts",
-        "../../../_MODULE_/additional.d.ts"
+        "../../declarations/android-declarations.d.ts",
+        "../../declarations/android.d.ts",
+        "../../declarations/core-engine.d.ts"
     ]
 }

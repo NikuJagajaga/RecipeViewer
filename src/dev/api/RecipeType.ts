@@ -1,7 +1,17 @@
+const McFontPaint: android.graphics.Paint = (() => {
+    const NativeAPI = ModAPI.requireGlobal("requireMethodFromNativeAPI");
+    const getMcTypeface = NativeAPI("utils.FileTools", "getMcTypeface");
+    const paint = new android.graphics.Paint();
+    paint.setTypeface(getMcTypeface());
+    paint.setTextSize(24);
+    return paint;
+})();
+
+
 abstract class RecipeType {
 
-    private readonly window: UI.Window;
-    private readonly icon: ItemInstance;
+    readonly window: UI.Window;
+    readonly icon: ItemInstance;
     private description: string;
     private tankLimit: number;
 
@@ -17,8 +27,8 @@ abstract class RecipeType {
         content.drawing = content.drawing || [];
         content.drawing.some(elem => elem.type === "background") || content.drawing.unshift({type: "background", color: Color.TRANSPARENT});
 
-        const templateSlot = {type: "slot", visual: true, clicker: RecipeType.slotClicker};
-        const templateTank = {type: "scale", clicker: RecipeType.tankClicker, direction: 1};
+        const templateSlot = {type: "slot", visual: true, clicker: UiFuncs.slotClicker, onTouchEvent: UiFuncs.onTouchSlot};
+        const templateTank = {type: "scale", direction: 1, clicker: UiFuncs.tankClicker, onTouchEvent: UiFuncs.onTouchTank};
 
         let isInputSlot: boolean;
         let isOutputSlot: boolean;
@@ -46,7 +56,7 @@ abstract class RecipeType {
         }
 
         //@ts-ignore
-        this.window.setContent({location: {x: 230, y: 80, width: 600, height: 340}, params: content.params, drawing: content.drawing, elements: content.elements});
+        this.window.setContent({location: {x: 230, y: 55, width: 600, height: 340}, params: content.params, drawing: content.drawing, elements: content.elements});
 
         const elements = this.window.getElements();
         for(let i = 0; i < inputSlotSize; i++){
@@ -163,35 +173,6 @@ abstract class RecipeType {
             }
         });
 
-    }
-
-    static slotClicker: UI.UIClickEvent = {
-        onClick: (container, tile, elem) => {
-            SubUI.openWindow({id: elem.source.id, data: elem.source.data}, false);
-        },
-        onLongClick: (container, tile, elem) => {
-            SubUI.openWindow({id: elem.source.id, data: elem.source.data}, true);
-        }
-    };
-
-    static tankClicker: UI.UIClickEvent = {
-        onClick: (container, tile, elem) => {
-            SubUI.openWindow(RecipeType.getLiquidByTex(elem.getBinding("texture") + ""), false);
-        },
-        onLongClick: (container, tile, elem) => {
-            SubUI.openWindow(RecipeType.getLiquidByTex(elem.getBinding("texture") + ""), true);
-        }
-    };
-
-    private static getLiquidByTex(texture: string): string {
-        for(let key in LiquidRegistry.liquids){
-            if(LiquidRegistry.liquids[key].uiTextures.some(tex => {
-                return tex === texture;
-            })){
-                return key;
-            }
-        }
-        return "";
     }
 
 }

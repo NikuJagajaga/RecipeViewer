@@ -20,35 +20,39 @@ class WorkbenchRecipe extends RecipeType {
         });
     }
 
-    getAllList(): RecipePattern[] {
-        return [];
-    }
-
-    getList(id: number, data: number, isUsage: boolean): RecipePattern[] {
-        const list = [];
-        const data2 = Item.getMaxDamage(id) ? -1 : data;
-        const recipe = isUsage ? Recipes.getWorkbenchRecipesByIngredient(id, data2) : Recipes.getWorkbenchRecipesByResult(id, -1, data2);
-        const iterator = recipe.iterator();
-        let entry, field, result, input, chargeData;
+    convertToJSArray(set: java.util.Collection<Recipes.WorkbenchRecipe>): RecipePattern[] {
+        const list: RecipePattern[] = [];
+        const iterator = set.iterator();
+        let entry: Recipes.WorkbenchRecipe;
+        let field: native.Array<Recipes.RecipeEntry>;
+        let input: ItemInstance[];
         let i = 0;
-        //let amount = 0;
         while(iterator.hasNext()){
             entry = iterator.next();
-            result = entry.getResult();
             field = entry.getSortedEntries();
             input = [];
-            //chargeData = ChargeItemRegistry.getItemData(result.id);
             for(i = 0; i < 9; i++){
                 if(!field[i]){
                     break;
                 }
                 input[i] = {id: field[i].id, count: 1, data: field[i].data};
-                //amount += chargeData ? ChargeItemRegistry.getEnergyStored(field[i], chargeData.energy) : 0;
             }
-            //chargeData && chargeData.type != "extra" && result.count === 1 && ChargeItemRegistry.addEnergyTo(result, chargeData.energy, amount, amount, 100);
-            list.push({input: input, output: [result]});
+            list.push({input: input, output: [entry.getResult()]});
         }
         return list;
+    }
+
+    getAllList(): RecipePattern[] {
+        const recipes: java.util.Collection<Recipes.WorkbenchRecipe> = new java.util.HashSet();
+        ItemList.get().forEach(item => {
+            recipes.addAll(Recipes.getWorkbenchRecipesByResult(item.id, -1, -1));
+        });
+        return this.convertToJSArray(recipes);
+    }
+
+    getList(id: number, data: number, isUsage: boolean): RecipePattern[] {
+        const data2 = Item.getMaxDamage(id) ? -1 : data;
+        return this.convertToJSArray(isUsage ? Recipes.getWorkbenchRecipesByIngredient(id, data2) : Recipes.getWorkbenchRecipesByResult(id, -1, data2));
     }
 
 }

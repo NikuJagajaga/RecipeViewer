@@ -1,12 +1,33 @@
-interface ViewInfo {
-    mode: ViewMode;
+const ViewMode = {
+    ITEM: 0,
+    LIQUID: 1,
+    LIST: 2
+} as const;
+
+interface ItemView {
+    mode: 0;
     tray: string[];
-    id?: number;
-    data?: number;
-    liquid?: string;
-    isUsage?: boolean;
-    recipe?: string;
+    id: number;
+    data: number;
+    isUsage: boolean;
 }
+
+interface LiquidView {
+    mode: 1;
+    tray: string[];
+    liquid: string;
+    isUsage: boolean;
+}
+
+interface ListView {
+    mode: 2;
+    tray: string[];
+}
+
+type ViewInfo = ItemView | LiquidView | ListView;
+const isItemView = (a: ViewInfo): a is ItemView => a && a.mode === ViewMode.ITEM;
+const isLiquidView = (a: ViewInfo): a is LiquidView => a && a.mode === ViewMode.LIQUID;
+const isListView = (a: ViewInfo): a is ListView => a && a.mode === ViewMode.LIST;
 
 
 class SubUI {
@@ -15,75 +36,82 @@ class SubUI {
     private static list: RecipePattern[] = [];
 
     private static select = "";
-    private static cache: ViewInfo[] = [];
+    private static recent: ViewInfo[] = [];
 
     private static readonly window: UI.WindowGroup = (() => {
 
         const window = new UI.WindowGroup();
 
         window.addWindow("controller", {
-            location: {x: 140, y: 10, width: 720, height: 480},
+            location: {x: 140, y: 0, width: 720, height: 480},
             drawing: [
                 {type: "background", color: Color.TRANSPARENT},
-                {type: "frame", x: 0, y: 0, width: 1000, height: 666.7, bitmap: "default_frame_bg_light", scale: 2}
+                {type: "frame", x: 0, y: 0, width: 1000, height: 666.7, bitmap: "default_frame_bg_light", scale: 4}
             ],
             elements: {
                 textRecipe: {type: "text", x: 280, y: 20, font: {size: 40, color: Color.WHITE, shadow: 0.5}},
                 textUsage: {type: "text", x: 280, y: 20, font: {size: 40, color: Color.GREEN, shadow: 0.5}},
-                textAll: {type: "text", x: 280, y: 20, font: {size: 40, color: Color.YELLOW, shadow: 0.5}},
+                textAll: {type: "text", x: 280, y: 20, font: {size: 40, color: Color.YELLOW, shadow: 0.5}, clicker: {
+                    onClick: (container, tile, elem) => {
+                        this.openListView(RecipeTypeRegistry.getAllKeys());
+                    }
+                },
+                onTouchEvent: (elem, event) => {
+                    UiFuncs.popupTips("Show All Recipes", elem, event);
+                }},
                 buttonBack: {
                     type: "button",
                     x: 120, y: 15, scale: 3,
                     bitmap: "_craft_button_up", bitmap2: "_craft_button_down",
                     clicker: {
                         onClick: () => {
-                            SubUI.cache.pop();
-                            if(SubUI.cache.length){
-                                SubUI.updateWindow();
+                            this.recent.pop();
+                            if(this.recent.length > 0){
+                                this.updateWindow();
                                 return;
                             }
-                            SubUI.window.close();
+                            this.window.close();
                         },
                         onLongClick: () => {
-                            SubUI.cache.length = 0;
-                            SubUI.window.close();
+                            this.recent.length = 0;
+                            this.window.close();
                         }
                     }
                 },
                 textBack: {type: "text", x: 150, y: 25, z: 1, text: "Back",font: {color: Color.WHITE, size: 30, shadow: 0.5}},
                 buttonPrev: {
                     type: "button",
-                    x: 150, y: 610, scale: 2,
+                    x: 250 - 48 * 2.5, y: 590, scale: 2.5,
                     bitmap: "_button_prev_48x24", bitmap2: "_button_prev_48x24p",
                     clicker: {
                         onClick: () => {
-                            SubUI.turnPage(SubUI.page - 1);
+                            this.turnPage(this.page - 1);
                         },
                         onLongClick: () => {
-                            SubUI.turnPage(0);
+                            this.turnPage(0);
                         }
                     }
                 },
                 buttonNext: {
                     type: "button",
-                    x: 854, y: 610, scale: 2,
+                    x: 850, y: 590, scale: 2.5,
                     bitmap: "_button_next_48x24", bitmap2: "_button_next_48x24p",
                     clicker: {
                         onClick: () => {
-                            SubUI.turnPage(SubUI.page + 1);
+                            this.turnPage(this.page + 1);
                         },
                         onLongClick: () => {
-                            SubUI.turnPage(SubUI.list.length - 1);
+                            this.turnPage(this.list.length - 1);
                         }
                     }
                 },
                 scrollPage: {
                     type: "scroll",
                     x: 350, y: 595, length: 400,
-                    onTouchEvent: (elem: UI.Element, event: {localX: number, localY: number}) => {
-                        const len = SubUI.list.length - 1;
+                    onTouchEvent: (elem, event) => {
+                        const len = this.list.length - 1;
                         const page = Math.round(event.localX * len);
-                        SubUI.turnPage(page);
+                        this.turnPage(page);
                         event.localX = page / len;
                     }
                 },
@@ -91,6 +119,7 @@ class SubUI {
             }
         });
 
+        window.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
         window.setContainer(new UI.Container());
         window.setBlockingBackground(true);
 
@@ -110,21 +139,27 @@ class SubUI {
                 x: 0, y: i * 1000, size: 1000,
                 visual: true,
                 clicker: {
-                    onClick: (container: UI.Container, tile: TileEntity, elem: UI.Element) => {
-                        elem.source.id && SubUI.changeWindow(elem.y / 1000 | 0);
+                    onClick: (container, tile, elem) => {
+                        elem.source.id && this.changeWindow(elem.y / 1000 | 0);
                     },
-                    onLongClick: (container: UI.Container, tile: TileEntity, elem: UI.Element) => {
-                        const target = SubUI.getTarget();
-                        const key = target.tray[elem.y / 1000 | 0];
-                        const recipeType = RecipeTypeRegistry.get(key);
-                        recipeType && SubUI.openWindow(key);
+                    onLongClick: (container, tile, elem) => {
+                        const view = this.getView();
+                        const key = view.tray[elem.y / 1000 | 0];
+                        this.openListView([key]);
                     }
+                },
+                /*
+                onTouchEvent: (elem, event) => {
+                    const view = this.getView();
+                    const key = view.tray[elem.y / 1000 | 0];
+                    RecipeType.onTouch.popup(RecipeTypeRegistry.isExist(key) ? RecipeTypeRegistry.get(key).getName() : "", elem, event);
                 }
+                */
             };
             elements["description" + i] = {
                 type: "text",
                 x: 500, y: i * 1000 + 600, z: 1,
-                font: {size: 160, color: Color.WHITE, shadow: 0.5, alignment: UI.Font.ALIGN_CENTER}
+                font: {size: 160, color: Color.WHITE, shadow: 0.5, align: UI.Font.ALIGN_CENTER}
             };
         }
 
@@ -132,9 +167,8 @@ class SubUI {
 
         this.window.addWindow("tray", {
             location: {
-                x: 150, y: 20,
-                width: 60, height: 400,
-                padding: {top: 20, bottom: ScreenHeight - 480},
+                x: 150, y: 10,
+                width: 60, height: 460,
                 scrollY: recipeTypeLength * 60
             },
             params: {slot: "_default_slot_empty"},
@@ -142,135 +176,145 @@ class SubUI {
             elements: elements
         });
 
+        this.window.moveOnTop("overlay");
+
     }
 
-    static getTarget(): ViewInfo {
-        return this.cache[this.cache.length - 1];
+    static getView(): ViewInfo {
+        return this.recent[this.recent.length - 1];
     }
 
-    static openWindow(search: Tile | string, isUsage?: boolean): void {
-
-        const target = this.getTarget();
-
-        if(typeof search === "string"){
-            if(isUsage === void 0){
-                if(!RecipeTypeRegistry.isExist(search) || target && target.mode === ViewMode.ALL && target.recipe === search){
-                    return;
-                }
-                if(RecipeTypeRegistry.get(search).getAllList().length > 0){
-                    this.cache.push({mode: ViewMode.ALL, recipe: search, tray: [search]});
-                }
-                else{
-                    alert("Recipe not found");
-                    return;
-                }
-            }
-            else{
-                const array = RecipeTypeRegistry.getActiveTypeByLiquid(search, isUsage);
-                if(array.length === 0){
-                    alert("Recipe not found");
-                    return;
-                }
-                this.cache.push({mode: ViewMode.LIQUID, liquid: search, isUsage: isUsage, tray: array});
-            }
+    static openItemView(id: number, data: number, isUsage: boolean): boolean {
+        const currentView = this.getView();
+        if(id === 0 || isItemView(currentView) && currentView.id === id && currentView.data === data && currentView.isUsage === isUsage){
+            return false;
         }
-        else{
-            if(isUsage === void 0 || search.id === 0 || target && typeof target !== "string" && target.id === search.id && target.data === search.data && target.isUsage === isUsage){
-                return;
-            }
-            const array = RecipeTypeRegistry.getActiveType(search.id, search.data, isUsage);
-            if(array.length === 0){
-                alert("Recipe not found");
-                return;
-            }
-            this.cache.push({mode: ViewMode.ITEM, id: search.id, data: search.data, isUsage: isUsage, tray: array});
+        const array = RecipeTypeRegistry.getActiveType(id, data, isUsage);
+        if(array.length === 0){
+            return true;
         }
-
+        const view: ItemView = {mode: ViewMode.ITEM, id: id, data: data, isUsage: isUsage, tray: array};
+        this.recent.push(view);
         this.page = 0;
         this.updateWindow();
         this.window.open();
+        return false;
+    }
 
+    static openLiquidView(liquid: string, isUsage: boolean): boolean {
+        const currentView = this.getView();
+        if(liquid === "" || isLiquidView(currentView) && currentView.liquid === liquid && currentView.isUsage === isUsage){
+            return false;
+        }
+        const array = RecipeTypeRegistry.getActiveTypeByLiquid(liquid, isUsage);
+        if(array.length === 0){
+            return true;
+        }
+        const view: LiquidView = {mode: ViewMode.LIQUID, liquid: liquid, isUsage: isUsage, tray: array};
+        this.recent.push(view);
+        this.page = 0;
+        this.updateWindow();
+        this.window.open();
+        return false;
+    }
+
+    static openListView(recipes: string[]): void {
+        const tray: string[] = recipes.filter((recipe) => RecipeTypeRegistry.isExist(recipe) && RecipeTypeRegistry.get(recipe).getAllList().length > 0);
+        if(tray.length === 0){
+            return;
+        }
+        const view: ListView = {mode: ViewMode.LIST, tray: tray};
+        this.recent.push(view);
+        this.page = 0;
+        this.updateWindow();
+        this.window.open();
+    }
+
+    static setTitle(): void {
+        const view = this.getView();
+        const elements = this.window.getWindow("controller").getElements();
+        const title: string =
+            isItemView(view) ? ItemList.getName(view.id, view.data) :
+            isLiquidView(view) ? LiquidRegistry.getLiquidName(view.liquid) :
+            isListView(view) ? RecipeTypeRegistry.get(this.select).getName() : "";
+        elements.get("textRecipe").setBinding("text", !isListView(view) && !view.isUsage ? title : "");
+        elements.get("textUsage").setBinding("text", !isListView(view) && view.isUsage ? title : "");
+        elements.get("textAll").setBinding("text", isListView(view) ? title : "");
     }
 
     static updateWindow(): void {
 
-        const target = this.getTarget();
+        try{
 
-        let name: string;
-        switch(target.mode){
-            case ViewMode.ITEM: name = ItemList.getName(target.id, target.data); break;
-            case ViewMode.LIQUID: name = LiquidRegistry.getLiquidName(target.liquid); break;
-            case ViewMode.ALL: name = RecipeTypeRegistry.get(target.recipe).getName(); break;
-        }
-
-        let elements = this.window.getWindow("controller").getElements();
-        elements.get("textRecipe").setBinding("text", target.mode !== ViewMode.ALL && !target.isUsage ? name : "");
-        elements.get("textUsage").setBinding("text", target.mode !== ViewMode.ALL && target.isUsage ? name : "");
-        elements.get("textAll").setBinding("text", target.mode === ViewMode.ALL ? name : "");
-        elements = this.window.getWindow("tray").getElements();
-
+        const elements = this.window.getWindow("tray").getElements();
+        const view = this.getView();
         const length = RecipeTypeRegistry.getLength();
         let recipeType: RecipeType;
+        let icon: UI.Element;
+        let description: UI.Element;
 
         for(let i = 0; i < length; i++){
-            if(target.tray[i]){
-                recipeType = RecipeTypeRegistry.get(target.tray[i]);
-                elements.get("icon" + i).setBinding("source", recipeType.getIcon());
-                elements.get("description" + i).setBinding("text", recipeType.getDescription());
+            icon = elements.get("icon" + i);
+            description = elements.get("description" + i);
+            if(view.tray[i]){
+                recipeType = RecipeTypeRegistry.get(view.tray[i]);
+                icon.setBinding("source", recipeType.getIcon());
+                description.setBinding("text", recipeType.getDescription());
             }
             else{
-                elements.get("icon" + i).setBinding("source", {id: 0, count: 0, data: 0});
-                elements.get("description" + i).setBinding("text", "");
+                icon.setBinding("source", {id: 0, count: 0, data: 0});
+                description.setBinding("text", "");
             }
         }
 
         this.changeWindow(0);
+
+        }
+        catch(e){
+            alert("up: " + e);
+        }
 
     }
 
     static changeWindow(index: number): void {
 
         const trayWindow = this.window.getWindow("tray");
-        const target = this.getTarget();
+        const view = this.getView();
 
-        this.select = target.tray[index];
+        this.select = view.tray[index];
         trayWindow.getElements().get("cursor").setPosition(0, index * 1000);
-        trayWindow.getLocation().setScroll(0, target.tray.length * 60);
+        //trayWindow.getLocation().setScroll(0, view.tray.length * 60);
 
         const recipeType = RecipeTypeRegistry.get(this.select);
         this.window.addWindowInstance("custom", recipeType.getWindow());
+        UiFuncs.moveOverlayOnTop(this.window);
 
         try{
-            switch(target.mode){
-                case ViewMode.ITEM: this.list = recipeType.getList(target.id, target.data, target.isUsage); break;
-                case ViewMode.LIQUID: this.list = recipeType.getListByLiquid(target.liquid, target.isUsage); break;
-                case ViewMode.ALL: this.list = recipeType.getAllList(); break;
-            }
+            this.list =
+                isItemView(view) ? recipeType.getList(view.id, view.data, view.isUsage) :
+                isLiquidView(view) ? recipeType.getListByLiquid(view.liquid, view.isUsage) :
+                isListView(view) ? recipeType.getAllList() : [];
         }
         catch(e){
             RecipeTypeRegistry.delete(this.select);
             alert('[RV] RecipeType "' + this.select + '" has been deleted.\n' + e);
         }
 
+        this.setTitle();
         this.turnPage(0, true);
 
     }
 
     static turnPage(page: number, force?: boolean): void {
-
         if(!force && this.page === page){
             return;
         }
-
         const recipeType = RecipeTypeRegistry.get(this.select);
-
-        let elements = this.window.getWindow("controller").getElements();
+        const elements = this.window.getWindow("controller").getElements();
         this.page = page < 0 ? this.list.length : page >= this.list.length ? 0 : page;
         elements.get("scrollPage").setBinding("raw-value", java.lang.Float.valueOf(this.page / (this.list.length - 1)));
         elements.get("textPage").setBinding("text", (this.page + 1) + " / " + this.list.length);
-        const recipe = this.list[this.page];
-        recipeType.showRecipe(recipe);
-
+        recipeType.showRecipe(this.list[this.page]);
     }
 
 }

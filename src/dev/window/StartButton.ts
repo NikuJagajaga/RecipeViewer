@@ -11,7 +11,7 @@ const StartButton = new UI.Window({
                 },
                 onLongClick: () => {
                     const list: ItemInfo[] = [];
-                    let inv;
+                    let inv: ItemInstance;
                     for(let i = 0; i <= 36; i++){
                         inv = Player.getInventorySlot(i);
                         inv.id && list.push({id: inv.id, data: inv.data, name: ItemList.getName(inv.id, inv.data), type: ItemList.getItemType(inv.id)});

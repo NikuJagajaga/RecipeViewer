@@ -1,7 +1,5 @@
 const Color = android.graphics.Color;
-const ScreenWidth = 1000;
 const ScreenHeight = UI.getScreenHeight();
-const Context = UI.getContext();
 const isLegacy = getMCPEVersion().array[1] === 11;
 
 interface ItemInfo {
@@ -11,9 +9,7 @@ interface ItemInfo {
     type: "block" | "item";
 }
 
-type valueof<T> = T[keyof T];
-const ViewMode = {ITEM: 0, LIQUID: 1, ALL: 2} as const;
-type ViewMode = valueof<typeof ViewMode>;
+type TouchEventType = "DOWN" | "UP" | "MOVE" | "CLICK" | "LONG_CLICK" | "CANCEL";
 
 interface LiquidInstance {
     liquid: string;
@@ -29,8 +25,8 @@ interface RecipePattern {
 }
 
 
+const Math_clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
 const removeDuplicateFilterFunc = (item1: ItemInfo, index: number, array: ItemInfo[]) => array.findIndex(item2 => item1.id === item2.id && item1.data === item2.data && item1.type === item2.type) === index;
-const setLoadingTip: (text: string) => void = ModAPI.requireGlobal("MCSystem.setLoadingTip");
 
 const isBlockID = (id: number): boolean => {
     const info = IDRegistry.getIdInfo(id);
@@ -41,3 +37,18 @@ const isItemID = (id: number): boolean => {
     const info = IDRegistry.getIdInfo(id);
     return info && info.startsWith("item");
 };
+
+
+const Context = UI.getContext();
+const runOnUiThread = (func: () => void) => {
+    Context.runOnUiThread(new java.lang.Runnable({
+        run: () =>{
+            try{
+                func();
+            }
+            catch(e){
+                alert(e);
+            }
+        }
+    }));
+}

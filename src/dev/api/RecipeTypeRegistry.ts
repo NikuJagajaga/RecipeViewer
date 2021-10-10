@@ -18,8 +18,12 @@ class RecipeTypeRegistry {
         delete this.types[key];
     }
 
+    static getAllKeys(): string[] {
+        return Object.keys(this.types);
+    }
+
     static getLength(): number {
-        return Object.keys(this.types).length;
+        return this.getAllKeys().length;
     }
 
     static getActiveType(id: number, data: number, isUsage: boolean): string[] {
@@ -50,8 +54,19 @@ class RecipeTypeRegistry {
         return array;
     }
 
-    static openRecipePage (key: string): void {
-        SubUI.openWindow(key);
+    static openRecipePage (recipeKey: string | string[]): void {
+        SubUI.openListView(typeof recipeKey === "string" ? [recipeKey] : recipeKey);
+    }
+
+    static getLiquidByTex(texture: string): string {
+        for(let key in LiquidRegistry.liquids){
+            if(LiquidRegistry.liquids[key].uiTextures.some(tex => {
+                return tex === texture;
+            })){
+                return key;
+            }
+        }
+        return "";
     }
 
 }

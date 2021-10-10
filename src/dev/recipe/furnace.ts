@@ -30,10 +30,6 @@ class FurnaceRecipe extends RecipeType {
 }
 
 
-RecipeTypeRegistry.register("furnace", new FurnaceRecipe());
-RButton.putOnNativeGui("furnace_screen", "furnace");
-
-
 class FurnaceFuelRecipe extends RecipeType {
 
     constructor(){
@@ -50,7 +46,7 @@ class FurnaceFuelRecipe extends RecipeType {
     }
 
     getAllList(): RecipePattern[] {
-        return [];
+        return ItemList.get().filter(item => Recipes.getFuelBurnDuration(item.id, item.data) > 0).map(item => ({input: [{id: item.id, count: 1, data: item.data}]}));
     }
 
     getList(id: number, data: number, isUsage: boolean): RecipePattern[] {
@@ -65,5 +61,6 @@ class FurnaceFuelRecipe extends RecipeType {
 
 }
 
-
+RecipeTypeRegistry.register("furnace", new FurnaceRecipe());
 RecipeTypeRegistry.register("fuel", new FurnaceFuelRecipe());
+RButton.putOnNativeGui("furnace_screen", ["furnace", "fuel"]);

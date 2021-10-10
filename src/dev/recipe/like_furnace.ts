@@ -39,5 +39,5 @@ RecipeTypeRegistry.register("blast_furnace", BlastFurnaceRecipe);
 RecipeTypeRegistry.register("smoker", SmokerRecipe);
 RecipeTypeRegistry.register("campfire", CampfireRecipe);
 
-RButton.putOnNativeGui("blast_furnace_screen", "blast_furnace");
-RButton.putOnNativeGui("smoker_screen", "smoker");
+RButton.putOnNativeGui("blast_furnace_screen", ["blast_furnace", "fuel"]);
+RButton.putOnNativeGui("smoker_screen", ["smoker", "fuel"]);
