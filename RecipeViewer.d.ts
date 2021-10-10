@@ -14,7 +14,8 @@ declare interface RecipePattern {
     input?: ItemInstance[],
     output?: ItemInstance[],
     inputLiq?: LiquidInstance[],
-    outputLiq?: LiquidInstance[]
+    outputLiq?: LiquidInstance[],
+    [key: string]: any;
 }
 declare interface OldRecipeContents {
     icon: Tile | number;
@@ -64,6 +65,7 @@ declare abstract class RecipeType {
 }
 declare interface RecipeTypeRegistry {
     register(key: string, recipeType: RecipeType): void;
+    openRecipePage(key: string | string[]): void;
 }
 declare interface ItemList {
     get(): ItemInfo[];
