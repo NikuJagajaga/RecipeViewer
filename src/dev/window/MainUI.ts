@@ -101,7 +101,7 @@ class MainUI {
                 y: 53,
                 width: 94,
                 height: height - 106,
-                bitmap: "_liquid_water_texture_0",
+                bitmap: "_default_slot_empty",
                 value: 1,
                 clicker: UiFuncs.tankClicker,
                 onTouchEvent: UiFuncs.onTouchTank
@@ -279,7 +279,7 @@ class MainUI {
                     elem.setBinding("value", 1);
                 }
                 else{
-                    elem.setBinding("texture", "");
+                    elem.setBinding("texture", "_default_slot_empty");
                     elem.setBinding("value", 0);
                 }
             }

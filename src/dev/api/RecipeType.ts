@@ -169,6 +169,7 @@ abstract class RecipeType {
                 elem.setBinding("value", recipe.outputLiq[i].amount / this.tankLimit);
             }
             else{
+                elem.setBinding("texture", "_default_slot_empty");
                 elem.setBinding("value", 0);
             }
         });

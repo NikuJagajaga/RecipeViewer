@@ -219,8 +219,9 @@ class SubUI {
     }
 
     static openListView(recipes: string[]): void {
+        const currentView = this.getView();
         const tray: string[] = recipes.filter((recipe) => RecipeTypeRegistry.isExist(recipe) && RecipeTypeRegistry.get(recipe).getAllList().length > 0);
-        if(tray.length === 0){
+        if(tray.length === 0 || isListView(currentView) && [...currentView.tray].sort().join(",") === [...tray].sort().join(",")){
             return;
         }
         const view: ListView = {mode: ViewMode.LIST, tray: tray};

@@ -24,6 +24,15 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 var Color = android.graphics.Color;
 var ScreenHeight = UI.getScreenHeight();
 var isLegacy = getMCPEVersion().array[1] === 11;
@@ -520,6 +529,7 @@ var RecipeType = /** @class */ (function () {
                 elem.setBinding("value", recipe.outputLiq[i].amount / _this.tankLimit);
             }
             else {
+                elem.setBinding("texture", "_default_slot_empty");
                 elem.setBinding("value", 0);
             }
         });
@@ -794,7 +804,7 @@ var MainUI = /** @class */ (function () {
                     elem.setBinding("value", 1);
                 }
                 else {
-                    elem.setBinding("texture", "");
+                    elem.setBinding("texture", "_default_slot_empty");
                     elem.setBinding("value", 0);
                 }
             }
@@ -903,7 +913,7 @@ var MainUI = /** @class */ (function () {
                 y: 53,
                 width: 94,
                 height: height - 106,
-                bitmap: "_liquid_water_texture_0",
+                bitmap: "_default_slot_empty",
                 value: 1,
                 clicker: UiFuncs.tankClicker,
                 onTouchEvent: UiFuncs.onTouchTank
@@ -1121,8 +1131,9 @@ var SubUI = /** @class */ (function () {
         return false;
     };
     SubUI.openListView = function (recipes) {
+        var currentView = this.getView();
         var tray = recipes.filter(function (recipe) { return RecipeTypeRegistry.isExist(recipe) && RecipeTypeRegistry.get(recipe).getAllList().length > 0; });
-        if (tray.length === 0) {
+        if (tray.length === 0 || isListView(currentView) && __spreadArray([], currentView.tray, true).sort().join(",") === __spreadArray([], tray, true).sort().join(",")) {
             return;
         }
         var view = { mode: ViewMode.LIST, tray: tray };
@@ -1351,19 +1362,27 @@ var WorkbenchRecipe = /** @class */ (function (_super) {
                 input6: { x: 200, y: 300, size: 100 },
                 input7: { x: 300, y: 300, size: 100 },
                 input8: { x: 400, y: 300, size: 100 },
-                output0: { x: 680, y: 190, size: 120 }
+                output0: { x: 680, y: 190, size: 120 },
+                shapelessIcon: { type: "image", x: 740, y: 130, scale: 1.5, bitmap: "shapeless_icon" }
             }
         }) || this;
     }
     WorkbenchRecipe.prototype.convertToJSArray = function (set) {
         var list = [];
+        var masks = {};
         var iterator = set.iterator();
         var entry;
+        var mask;
         var field;
         var input;
         var i = 0;
         while (iterator.hasNext()) {
             entry = iterator.next();
+            mask = entry.getRecipeMask();
+            if (mask in masks) {
+                continue;
+            }
+            masks[mask] = true;
             field = entry.getSortedEntries();
             input = [];
             for (i = 0; i < 9; i++) {
@@ -1372,7 +1391,7 @@ var WorkbenchRecipe = /** @class */ (function (_super) {
                 }
                 input[i] = { id: field[i].id, count: 1, data: field[i].data };
             }
-            list.push({ input: input, output: [entry.getResult()] });
+            list.push({ input: input, output: [entry.getResult()], isShapeless: mask.startsWith("$$") });
         }
         return list;
     };
@@ -1386,6 +1405,9 @@ var WorkbenchRecipe = /** @class */ (function (_super) {
     WorkbenchRecipe.prototype.getList = function (id, data, isUsage) {
         var data2 = Item.getMaxDamage(id) ? -1 : data;
         return this.convertToJSArray(isUsage ? Recipes.getWorkbenchRecipesByIngredient(id, data2) : Recipes.getWorkbenchRecipesByResult(id, -1, data2));
+    };
+    WorkbenchRecipe.prototype.onOpen = function (elements, recipe) {
+        elements.get("shapelessIcon").setPosition(740, recipe.isShapeless ? 130 : 1000);
     };
     return WorkbenchRecipe;
 }(RecipeType));
@@ -1760,6 +1782,42 @@ var TradingRecipe = /** @class */ (function (_super) {
 }(RecipeType));
 RecipeTypeRegistry.register("trading", new TradingRecipe());
 RButton.putOnNativeGui("trade_screen", "trading");
+var LiquidFillingRecipe = /** @class */ (function (_super) {
+    __extends(LiquidFillingRecipe, _super);
+    function LiquidFillingRecipe() {
+        var _this = _super.call(this, "Liquid Filling", VanillaItemID.bucket, {
+            drawing: [
+                { type: "frame", x: 450, y: 50, width: 100, height: 400, scale: 4, bitmap: "default_container_frame" },
+                { type: "bitmap", x: 330 + 28, y: 190 + 28, scale: 1, bitmap: "_workbench_bar" },
+                { type: "bitmap", x: 550 + 28, y: 190 + 28, scale: 1, bitmap: "_workbench_bar" }
+            ],
+            elements: {
+                input0: { x: 210, y: 190, size: 120 },
+                output0: { x: 670, y: 190, size: 120 },
+                inputLiq0: { x: 450 + 4, y: 50 + 4, width: 100 - 8, height: 400 - 8 }
+            }
+        }) || this;
+        _this.setTankLimit(1000);
+        return _this;
+    }
+    LiquidFillingRecipe.prototype.getAllList = function () {
+        var list = [];
+        var empty;
+        var full;
+        for (var key in LiquidRegistry.EmptyByFull) {
+            empty = LiquidRegistry.EmptyByFull[key];
+            full = key.split(":");
+            list.push({
+                input: [{ id: empty.id, count: 1, data: empty.data }],
+                output: [{ id: +full[0], count: 1, data: +full[1] }],
+                inputLiq: [{ liquid: empty.liquid, amount: 1000 }]
+            });
+        }
+        return list;
+    };
+    return LiquidFillingRecipe;
+}(RecipeType));
+RecipeTypeRegistry.register("liquid_filling", new LiquidFillingRecipe());
 Callback.addCallback("PostLoaded", function () {
     var x = __config__.getNumber("ButtonPosition.x").intValue();
     var y = __config__.getNumber("ButtonPosition.y").intValue();
