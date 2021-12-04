@@ -63,6 +63,10 @@ class WorkbenchRecipe extends RecipeType {
         return this.convertToJSArray(isUsage ? Recipes.getWorkbenchRecipesByIngredient(id, data2) : Recipes.getWorkbenchRecipesByResult(id, -1, data2));
     }
 
+    hasAnyRecipe(id: number, data: number, isUsage: boolean): boolean {
+        return super.hasAnyRecipe(id, Item.getMaxDamage(id) ? -1 : data, isUsage);
+    }
+
     onOpen(elements: java.util.HashMap<string, UI.Element>, recipe: RecipePattern): void {
         elements.get("shapelessIcon").setPosition(740, recipe.isShapeless ? 130 : 1000);
     }

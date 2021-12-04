@@ -1406,6 +1406,9 @@ var WorkbenchRecipe = /** @class */ (function (_super) {
         var data2 = Item.getMaxDamage(id) ? -1 : data;
         return this.convertToJSArray(isUsage ? Recipes.getWorkbenchRecipesByIngredient(id, data2) : Recipes.getWorkbenchRecipesByResult(id, -1, data2));
     };
+    WorkbenchRecipe.prototype.hasAnyRecipe = function (id, data, isUsage) {
+        return _super.prototype.hasAnyRecipe.call(this, id, Item.getMaxDamage(id) ? -1 : data, isUsage);
+    };
     WorkbenchRecipe.prototype.onOpen = function (elements, recipe) {
         elements.get("shapelessIcon").setPosition(740, recipe.isShapeless ? 130 : 1000);
     };
