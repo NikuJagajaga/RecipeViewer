@@ -35,7 +35,7 @@ class FurnaceFuelRecipe extends RecipeType {
     constructor(){
         super("Furnace Fuel", VanillaBlockID.furnace, {
             drawing: [
-                {type: "bitmap", x: 290, y: 140, scale: 8, bitmap: "furnace_burn"}
+                {type: "bitmap", x: 290, y: 140, scale: 8, bitmap: "rv.furnace_burn"}
             ],
             elements: {
                 input0: {x: 280, y: 260, size: 120},

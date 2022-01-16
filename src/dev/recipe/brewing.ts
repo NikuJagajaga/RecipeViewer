@@ -131,7 +131,7 @@ class BrewingRecipe extends RecipeType {
         super("Potion Brewing", VanillaBlockID.brewing_stand, {
             params: {slot: "classic_slot"},
             drawing: [
-                {type: "bitmap", x: 68, y: 60, scale: 4, bitmap: "brewing_stand_back"},
+                {type: "bitmap", x: 68, y: 60, scale: 4, bitmap: "rv.brewing_stand_back"},
                 {type: "text", x: 244 + 64, y: 440, text: "Source", font: font},
                 {type: "text", x: 628 + 64, y: 440, text: "Result", font: font}
             ],

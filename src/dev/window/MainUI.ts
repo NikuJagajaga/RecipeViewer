@@ -14,6 +14,7 @@ class MainUI {
         {text: "Sort by Name (DESC)", type: "name", reverse: true}
     ];
 
+
     private static sortFunc = {
         id: (a: ItemInfo, b: ItemInfo) => {
             if(a.type === "block" && b.type === "item"){
@@ -29,34 +30,46 @@ class MainUI {
         }
     }
 
-    static readonly slotCountX = 12;
-
-    static readonly slotCountY: number = (() => {
-        const slotSize = 960 / this.slotCountX;
-        let slotCountY = 0;
-        for(let y = 68; y <= ScreenHeight - 80 - slotSize; y += slotSize){
-            slotCountY++;
-        }
-        return slotCountY;
-    })();
-
-    static readonly slotCount = this.slotCountX * this.slotCountY;
+    private static readonly slotCountXLimit = {min: 8, max: 24};
+    private static slotCountX = 0;
+    private static slotCountY: number = this.calcSlotCountY();
+    private static slotCount = this.slotCountX * this.slotCountY;
     static readonly tankCount = 8;
 
-    private static readonly listWindow: {item: UI.Window, liquid: UI.Window} = (() => {
+    private static calcSlotCountY(): number {
+        const slotSize = 960 / this.slotCountX;
+        let count = 0;
+        while(68 + slotSize * count <= ScreenHeight - 70){
+            count++;
+        }
+        return count - 1;
+    }
+
+    private static setSlotCount(x: number): boolean { //return [need refresh]
+        const x2 = Math.min(Math.max(x, this.slotCountXLimit.min), this.slotCountXLimit.max);
+        if(this.slotCountX === x2){
+            return false;
+        }
+        this.slotCountX = x2;
+        this.slotCountY = this.calcSlotCountY();
+        this.slotCount = this.slotCountX * this.slotCountY;
+        __config__.getValue("slotCountX").set(x2);
+        return true;
+    }
+
+    private static changeSlotXCount(val: -1 | 1): void {
+        if(this.setSlotCount(this.slotCountX + val)){
+            this.refreshSlotsWindow();
+            this.switchWindow(false, true);
+        }
+    }
+
+    private static refreshSlotsWindow(): void {
 
         const width = 960;
         const height = this.slotCountY * (960 / this.slotCountX);
-
-        const location: UI.WindowLocationParams = {
-            x: 20,
-            y: 68,
-            width: width,
-            height: height,
-        };
-
+        const location: UI.WindowLocationParams = {x: 20, y: 68, width: width, height: height};
         const slotSize = 1000 / this.slotCountX;
-
         const elemSlot: UI.UIElementSet = {};
 
         for(let i = 0; i < this.slotCount; i++){
@@ -71,18 +84,26 @@ class MainUI {
             };
         }
 
-        const bgColor = UI.FrameTextureSource.get("classic_frame_slot").getCentralColor();
-
-        const winSlot = new UI.Window({
+        this.slotsWindow = new UI.Window({
             location: location,
             params: {slot: "_default_slot_empty"},
             drawing: [
-                {type: "background", color: bgColor}
+                {type: "background", color: UI.FrameTextureSource.get("classic_frame_slot").getCentralColor()}
             ],
             elements: elemSlot
         });
 
-        const drawTank: UI.DrawingElement[] = [{type: "background", color: bgColor}];
+    }
+
+
+    private static slotsWindow: UI.Window;
+
+    private static tanksWindow: UI.Window = (() => {
+
+        const width = 960;
+        const height = ScreenHeight - 68 - 70;
+        const location: UI.WindowLocationParams = {x: 20, y: 68, width: width, height: height};
+        const drawTank: UI.DrawingElement[] = [{type: "background", color: UI.FrameTextureSource.get("classic_frame_slot").getCentralColor()}];
         const elemTank: UI.UIElementSet = {};
 
         for(let i = 0; i < this.tankCount; i++){
@@ -108,121 +129,127 @@ class MainUI {
             };
         }
 
-        const winTank = new UI.Window({
+        return new UI.Window({
             location: location,
             drawing: drawTank,
             elements: elemTank
         });
 
-        return {item: winSlot, liquid: winTank};
-
     })();
+
 
     private static readonly window: UI.WindowGroup = (() => {
 
         const window = new UI.WindowGroup();
-
-        const elements: UI.UIElementSet = {
-            buttonClose: {
-                type: "closeButton",
-                x: 1000 - 45 - 9, y: 9, scale: 3,
-                bitmap: "classic_close_button", bitmap2: "classic_close_button_down"
-            },
-            buttonSearch: {
-                type: "button",
-                x: 20, y: 16, scale: 0.8,
-                bitmap: "mod_browser_search_field",
-                clicker: {
-                    onClick: () => {
-                        runOnUiThread(() => {
-                            const editText = new android.widget.EditText(Context);
-                            editText.setHint("in this space");
-                            new android.app.AlertDialog.Builder(Context)
-                                .setTitle("Please type the keywords")
-                                .setView(editText)
-                                .setPositiveButton("Search", new android.content.DialogInterface.OnClickListener({
-                                    onClick: () => {
-                                        const elements = this.window.getElements();
-                                        const keyword = editText.getText() + "";
-                                        const regexp = new RegExp(keyword, "i");
-                                        elements.get("textSearch").setBinding("text", keyword.length ? keyword : "Search");
-                                        this.list = ItemList.get().filter(item => item.name.match(regexp));
-                                        this.liqList = Object.keys(LiquidRegistry.liquids).filter(liquid => LiquidRegistry.getLiquidName(liquid).match(regexp));
-                                        this.page = 0;
-                                        this.updateWindow();
-                                    }
-                                })).show();
-                        });
-                    }
-                }
-            },
-            textSearch: {
-                type: "text",
-                x: 30, y: 26, z: 1,
-                font: {color: Color.WHITE, size: 20},
-                text: "Search"
-            },
-            buttonSort: {
-                type: "button",
-                x: 450, y: 16, scale: 0.8,
-                bitmap: "mod_browser_button", bitmap2: "mod_browser_button_down",
-                clicker: {onClick: () =>{
-                    this.changeSortMode();
-                    this.updateWindow();
-                }}
-            },
-            textSort: {
-                type: "text",
-                x: 465, y: 26, z: 1,
-                text: "",
-                font: {color: Color.WHITE, size: 16, shadow: 0.5}
-            },
-            switchMode: {type: "switch", x: 753, y: 20, scale: 2, onNewState: (state) => {
-                World.isWorldLoaded() && this.switchWindow(!!state);
-            }}
-        };
-
         const slotSize = 960 / this.slotCountX;
-
-        elements.buttonPrev = {
-            type: "button",
-            x: 20, y: ScreenHeight - 60, scale: 2,
-            bitmap: "_button_prev_48x24", bitmap2: "_button_prev_48x24p",
-            clicker: {
-                onClick: () => {
-                    this.page--;
-                    this.updateWindow();
-                }
-            }
-        };
-
-        elements.buttonNext = {
-            type: "button",
-            x: 884, y: ScreenHeight - 60, scale: 2,
-            bitmap: "_button_next_48x24", bitmap2: "_button_next_48x24p",
-            clicker: {
-                onClick: () => {
-                    this.page++;
-                    this.updateWindow();
-                }
-            }
-        };
-
-        elements.textPage = {type: "text", x: 490, y: ScreenHeight - 80, font: {size: 40, align: UI.Font.ALIGN_CENTER}};
 
         window.addWindow("controller", {
             location: {x: 0, y: 0, width: 1000, height: ScreenHeight},
             drawing: [
                 {type: "background", color: Color.TRANSPARENT},
                 {type: "frame", x: 0, y: 0, width: 1000, height: ScreenHeight, bitmap: "classic_frame_bg_light", scale: 3},
-                {type: "frame", x: 20 - 3, y: 68 - 3, width: 960 + 6, height: this.slotCountY * slotSize + 6, bitmap: "classic_frame_slot", scale: 3},
-                {type: "text", x: 700, y: 43, text: "Item", font: {size: 20}},
-                {type: "text", x: 820, y: 43, text: "Liquid", font: {size: 20}}
+                {type: "frame", x: 20 - 3, y: 68 - 3, width: 960 + 6, height: ScreenHeight - 68 - 70 + 6, bitmap: "classic_frame_slot", scale: 3},
+                {type: "frame", x: 20, y: ScreenHeight - 60, width: 230, height: 50, bitmap: "classic_frame_bg_light", scale: 1},
+                {type: "text", x: 40, y: ScreenHeight - 27, text: "Item", font: {size: 20}},
+                {type: "text", x: 160, y: ScreenHeight - 27, text: "Liquid", font: {size: 20}}
             ],
-            elements: elements
+            elements: {
+                buttonClose: {
+                    type: "closeButton",
+                    x: 1000 - 45 - 9, y: 9, scale: 3,
+                    bitmap: "classic_close_button", bitmap2: "classic_close_button_down"
+                },
+                buttonSearch: {
+                    type: "button",
+                    x: 20, y: 15, scale: 0.8,
+                    bitmap: "mod_browser_search_field",
+                    clicker: {
+                        onClick: () => {
+                            runOnUiThread(() => {
+                                const editText = new android.widget.EditText(Context);
+                                editText.setHint("in this space");
+                                new android.app.AlertDialog.Builder(Context)
+                                    .setTitle("Please type the keywords")
+                                    .setView(editText)
+                                    .setPositiveButton("Search", new android.content.DialogInterface.OnClickListener({
+                                        onClick: () => {
+                                            const elements = this.window.getElements();
+                                            const keyword = editText.getText() + "";
+                                            const regexp = new RegExp(keyword, "i");
+                                            elements.get("textSearch").setBinding("text", keyword.length ? keyword : "Search");
+                                            this.list = ItemList.get().filter(item => item.name.match(regexp));
+                                            this.liqList = Object.keys(LiquidRegistry.liquids).filter(liquid => LiquidRegistry.getLiquidName(liquid).match(regexp));
+                                            this.page = 0;
+                                            this.updateWindow();
+                                        }
+                                    })).show();
+                            });
+                        }
+                    }
+                },
+                textSearch: {
+                    type: "text",
+                    x: 30, y: 25, z: 1,
+                    font: {color: Color.WHITE, size: 20},
+                    text: "Search"
+                },
+                buttonSort: {
+                    type: "button",
+                    x: 450, y: 15, scale: 0.8,
+                    bitmap: "mod_browser_button", bitmap2: "mod_browser_button_down",
+                    clicker: {onClick: (con, tile, elem) =>{
+                        this.changeSortMode();
+                        this.updateWindow();
+                    }}
+                },
+                textSort: {
+                    type: "text",
+                    x: 465, y: 25, z: 1,
+                    text: "",
+                    font: {color: Color.WHITE, size: 16, shadow: 0.5}
+                },
+                buttonPlus: {type: "button", x: 800, y: 25, bitmap: "rv.button_plus", bitmap2: "rv.button_plus_pressed", scale: 2, clicker: {
+                    onClick: () => {
+                        this.changeSlotXCount(-1);
+                    }
+                }},
+                buttonMinus: {type: "button", x: 850, y: 25, bitmap: "rv.button_minus", bitmap2: "rv.button_minus_pressed", scale: 2, clicker: {
+                    onClick: () => {
+                        this.changeSlotXCount(1);
+                    }
+                }},
+                switchMode: {type: "switch", x: 93, y: ScreenHeight - 50, scale: 2, onNewState: (state, container, elem) => {
+                    World.isWorldLoaded() && this.switchWindow(!!state);
+                }},
+                buttonPrev: {
+                    type: "button",
+                    x: 520, y: ScreenHeight - 60, scale: 2,
+                    bitmap: "_button_prev_48x24", bitmap2: "_button_prev_48x24p",
+                    clicker: {
+                        onClick: () => {
+                            this.page--;
+                            this.updateWindow();
+                        }
+                    }
+                },
+                buttonNext: {
+                    type: "button",
+                    x: 1000 - 48 * 2 - 20, y: ScreenHeight - 60, scale: 2,
+                    bitmap: "_button_next_48x24", bitmap2: "_button_next_48x24p",
+                    clicker: {
+                        onClick: () => {
+                            this.page++;
+                            this.updateWindow();
+                        }
+                    }
+                },
+                textPage: {type: "text", x: 750, y: ScreenHeight - 75, font: {size: 40, align: UI.Font.ALIGN_CENTER}}
+            }
         });
 
-        window.addWindowInstance("list", this.listWindow.item);
+        this.setSlotCount(__config__.getNumber("slotCountX").intValue());
+        this.refreshSlotsWindow();
+        window.addWindowInstance("list", this.slotsWindow);
         window.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
         window.setBlockingBackground(true);
         window.setContainer(new UI.Container());
@@ -240,16 +267,18 @@ class MainUI {
 
     })();
 
+
     static switchWindow(liquidMode: boolean, force?: boolean): void {
         if(!force && this.liquidMode === liquidMode){
             return;
         }
         this.liquidMode = liquidMode;
         this.page = 0;
-        this.window.addWindowInstance("list", liquidMode ? this.listWindow.liquid : this.listWindow.item);
+        this.window.addWindowInstance("list", liquidMode ? this.tanksWindow : this.slotsWindow);
         UiFuncs.moveOverlayOnTop(this.window);
         this.updateWindow();
     }
+
 
     static changeSortMode(notChange?: boolean): void {
         const elements = this.window.getElements();
@@ -262,13 +291,14 @@ class MainUI {
         this.page = 0;
     }
 
+
     static updateWindow(): void {
         let elements = this.window.getElements();
         const maxPage = this.liquidMode ? (this.liqList.length / this.tankCount | 0) + 1 : (this.list.length / this.slotCount | 0) + 1;
         this.page = this.page < 0 ? maxPage - 1 : this.page >= maxPage ? 0 : this.page;
         elements.get("textPage").setBinding("text", (this.page + 1) + " / " + maxPage);
         if(this.liquidMode){
-            elements = this.listWindow.liquid.getElements();
+            elements = this.tanksWindow.getElements();
             let elem: UI.Element;
             let liquid: string;
             for(let i = 0; i < this.tankCount; i++){
@@ -285,7 +315,7 @@ class MainUI {
             }
         }
         else{
-            elements = this.listWindow.item.getElements();
+            elements = this.slotsWindow.getElements();
             let item: ItemInfo;
             for(let i = 0; i < this.slotCount; i++){
                 item = this.list[this.slotCount * this.page + i];
@@ -293,6 +323,7 @@ class MainUI {
             }
         }
     }
+
 
     static openWindow(list: ItemInfo[] = ItemList.get()): void {
         this.list = list;

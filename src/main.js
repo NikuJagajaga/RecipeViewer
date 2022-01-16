@@ -436,8 +436,28 @@ var RecipeType = /** @class */ (function () {
                 isOutputTank && outputTankSize++;
             }
         }
-        //@ts-ignore
-        this.window.setContent({ location: { x: 230, y: 55, width: 600, height: 340 }, params: content.params, drawing: content.drawing, elements: content.elements });
+        /*
+        before
+        x: 230,
+        y: 55,
+        width: 600,
+        height: 340
+        */
+        //same as SubUI Window "controller"
+        var location = new UI.WindowLocation({ x: (1000 - ScreenHeight * 1.5) / 2, y: 0, width: ScreenHeight * 1.5, height: ScreenHeight });
+        this.window.setContent({
+            location: {
+                x: location.x + location.windowToGlobal(120),
+                y: location.y + location.windowToGlobal(75),
+                padding: { top: location.y + location.windowToGlobal(75), bottom: location.windowToGlobal(75) },
+                width: location.windowToGlobal(860),
+                height: ScreenHeight - location.windowToGlobal(75)
+            },
+            params: content.params,
+            drawing: content.drawing,
+            //@ts-ignore
+            elements: content.elements
+        });
         var elements = this.window.getElements();
         for (var i = 0; i < inputSlotSize; i++) {
             this.elems.input[i] = elements.get("input" + i);
@@ -767,13 +787,64 @@ Callback.addCallback("NativeGuiChanged", function (screen) {
 var MainUI = /** @class */ (function () {
     function MainUI() {
     }
+    MainUI.calcSlotCountY = function () {
+        var slotSize = 960 / this.slotCountX;
+        var count = 0;
+        while (68 + slotSize * count <= ScreenHeight - 70) {
+            count++;
+        }
+        return count - 1;
+    };
+    MainUI.setSlotCount = function (x) {
+        var x2 = Math.min(Math.max(x, this.slotCountXLimit.min), this.slotCountXLimit.max);
+        if (this.slotCountX === x2) {
+            return false;
+        }
+        this.slotCountX = x2;
+        this.slotCountY = this.calcSlotCountY();
+        this.slotCount = this.slotCountX * this.slotCountY;
+        __config__.getValue("slotCountX").set(x2);
+        return true;
+    };
+    MainUI.changeSlotXCount = function (val) {
+        if (this.setSlotCount(this.slotCountX + val)) {
+            this.refreshSlotsWindow();
+            this.switchWindow(false, true);
+        }
+    };
+    MainUI.refreshSlotsWindow = function () {
+        var width = 960;
+        var height = this.slotCountY * (960 / this.slotCountX);
+        var location = { x: 20, y: 68, width: width, height: height };
+        var slotSize = 1000 / this.slotCountX;
+        var elemSlot = {};
+        for (var i = 0; i < this.slotCount; i++) {
+            elemSlot["slot" + i] = {
+                type: "slot",
+                x: (i % this.slotCountX) * slotSize,
+                y: (i / this.slotCountX | 0) * slotSize,
+                size: slotSize,
+                visual: true,
+                clicker: UiFuncs.slotClicker,
+                onTouchEvent: UiFuncs.onTouchSlot
+            };
+        }
+        this.slotsWindow = new UI.Window({
+            location: location,
+            params: { slot: "_default_slot_empty" },
+            drawing: [
+                { type: "background", color: UI.FrameTextureSource.get("classic_frame_slot").getCentralColor() }
+            ],
+            elements: elemSlot
+        });
+    };
     MainUI.switchWindow = function (liquidMode, force) {
         if (!force && this.liquidMode === liquidMode) {
             return;
         }
         this.liquidMode = liquidMode;
         this.page = 0;
-        this.window.addWindowInstance("list", liquidMode ? this.listWindow.liquid : this.listWindow.item);
+        this.window.addWindowInstance("list", liquidMode ? this.tanksWindow : this.slotsWindow);
         UiFuncs.moveOverlayOnTop(this.window);
         this.updateWindow();
     };
@@ -793,7 +864,7 @@ var MainUI = /** @class */ (function () {
         this.page = this.page < 0 ? maxPage - 1 : this.page >= maxPage ? 0 : this.page;
         elements.get("textPage").setBinding("text", (this.page + 1) + " / " + maxPage);
         if (this.liquidMode) {
-            elements = this.listWindow.liquid.getElements();
+            elements = this.tanksWindow.getElements();
             var elem = void 0;
             var liquid = void 0;
             for (var i = 0; i < this.tankCount; i++) {
@@ -810,7 +881,7 @@ var MainUI = /** @class */ (function () {
             }
         }
         else {
-            elements = this.listWindow.item.getElements();
+            elements = this.slotsWindow.getElements();
             var item = void 0;
             for (var i = 0; i < this.slotCount; i++) {
                 item = this.list[this.slotCount * this.page + i];
@@ -853,49 +924,16 @@ var MainUI = /** @class */ (function () {
             return a.name > b.name ? 1 : -1;
         }
     };
-    MainUI.slotCountX = 12;
-    MainUI.slotCountY = (function () {
-        var slotSize = 960 / _a.slotCountX;
-        var slotCountY = 0;
-        for (var y = 68; y <= ScreenHeight - 80 - slotSize; y += slotSize) {
-            slotCountY++;
-        }
-        return slotCountY;
-    })();
+    MainUI.slotCountXLimit = { min: 8, max: 24 };
+    MainUI.slotCountX = 0;
+    MainUI.slotCountY = _a.calcSlotCountY();
     MainUI.slotCount = _a.slotCountX * _a.slotCountY;
     MainUI.tankCount = 8;
-    MainUI.listWindow = (function () {
+    MainUI.tanksWindow = (function () {
         var width = 960;
-        var height = _a.slotCountY * (960 / _a.slotCountX);
-        var location = {
-            x: 20,
-            y: 68,
-            width: width,
-            height: height,
-        };
-        var slotSize = 1000 / _a.slotCountX;
-        var elemSlot = {};
-        for (var i = 0; i < _a.slotCount; i++) {
-            elemSlot["slot" + i] = {
-                type: "slot",
-                x: (i % _a.slotCountX) * slotSize,
-                y: (i / _a.slotCountX | 0) * slotSize,
-                size: slotSize,
-                visual: true,
-                clicker: UiFuncs.slotClicker,
-                onTouchEvent: UiFuncs.onTouchSlot
-            };
-        }
-        var bgColor = UI.FrameTextureSource.get("classic_frame_slot").getCentralColor();
-        var winSlot = new UI.Window({
-            location: location,
-            params: { slot: "_default_slot_empty" },
-            drawing: [
-                { type: "background", color: bgColor }
-            ],
-            elements: elemSlot
-        });
-        var drawTank = [{ type: "background", color: bgColor }];
+        var height = ScreenHeight - 68 - 70;
+        var location = { x: 20, y: 68, width: width, height: height };
+        var drawTank = [{ type: "background", color: UI.FrameTextureSource.get("classic_frame_slot").getCentralColor() }];
         var elemTank = {};
         for (var i = 0; i < _a.tankCount; i++) {
             drawTank.push({
@@ -919,110 +957,121 @@ var MainUI = /** @class */ (function () {
                 onTouchEvent: UiFuncs.onTouchTank
             };
         }
-        var winTank = new UI.Window({
+        return new UI.Window({
             location: location,
             drawing: drawTank,
             elements: elemTank
         });
-        return { item: winSlot, liquid: winTank };
     })();
     MainUI.window = (function () {
         var window = new UI.WindowGroup();
-        var elements = {
-            buttonClose: {
-                type: "closeButton",
-                x: 1000 - 45 - 9, y: 9, scale: 3,
-                bitmap: "classic_close_button", bitmap2: "classic_close_button_down"
-            },
-            buttonSearch: {
-                type: "button",
-                x: 20, y: 16, scale: 0.8,
-                bitmap: "mod_browser_search_field",
-                clicker: {
-                    onClick: function () {
-                        runOnUiThread(function () {
-                            var editText = new android.widget.EditText(Context);
-                            editText.setHint("in this space");
-                            new android.app.AlertDialog.Builder(Context)
-                                .setTitle("Please type the keywords")
-                                .setView(editText)
-                                .setPositiveButton("Search", new android.content.DialogInterface.OnClickListener({
-                                onClick: function () {
-                                    var elements = _a.window.getElements();
-                                    var keyword = editText.getText() + "";
-                                    var regexp = new RegExp(keyword, "i");
-                                    elements.get("textSearch").setBinding("text", keyword.length ? keyword : "Search");
-                                    _a.list = ItemList.get().filter(function (item) { return item.name.match(regexp); });
-                                    _a.liqList = Object.keys(LiquidRegistry.liquids).filter(function (liquid) { return LiquidRegistry.getLiquidName(liquid).match(regexp); });
-                                    _a.page = 0;
-                                    _a.updateWindow();
-                                }
-                            })).show();
-                        });
-                    }
-                }
-            },
-            textSearch: {
-                type: "text",
-                x: 30, y: 26, z: 1,
-                font: { color: Color.WHITE, size: 20 },
-                text: "Search"
-            },
-            buttonSort: {
-                type: "button",
-                x: 450, y: 16, scale: 0.8,
-                bitmap: "mod_browser_button", bitmap2: "mod_browser_button_down",
-                clicker: { onClick: function () {
-                        _a.changeSortMode();
-                        _a.updateWindow();
-                    } }
-            },
-            textSort: {
-                type: "text",
-                x: 465, y: 26, z: 1,
-                text: "",
-                font: { color: Color.WHITE, size: 16, shadow: 0.5 }
-            },
-            switchMode: { type: "switch", x: 753, y: 20, scale: 2, onNewState: function (state) {
-                    World.isWorldLoaded() && _a.switchWindow(!!state);
-                } }
-        };
         var slotSize = 960 / _a.slotCountX;
-        elements.buttonPrev = {
-            type: "button",
-            x: 20, y: ScreenHeight - 60, scale: 2,
-            bitmap: "_button_prev_48x24", bitmap2: "_button_prev_48x24p",
-            clicker: {
-                onClick: function () {
-                    _a.page--;
-                    _a.updateWindow();
-                }
-            }
-        };
-        elements.buttonNext = {
-            type: "button",
-            x: 884, y: ScreenHeight - 60, scale: 2,
-            bitmap: "_button_next_48x24", bitmap2: "_button_next_48x24p",
-            clicker: {
-                onClick: function () {
-                    _a.page++;
-                    _a.updateWindow();
-                }
-            }
-        };
-        elements.textPage = { type: "text", x: 490, y: ScreenHeight - 80, font: { size: 40, align: UI.Font.ALIGN_CENTER } };
         window.addWindow("controller", {
             location: { x: 0, y: 0, width: 1000, height: ScreenHeight },
             drawing: [
                 { type: "background", color: Color.TRANSPARENT },
                 { type: "frame", x: 0, y: 0, width: 1000, height: ScreenHeight, bitmap: "classic_frame_bg_light", scale: 3 },
-                { type: "frame", x: 20 - 3, y: 68 - 3, width: 960 + 6, height: _a.slotCountY * slotSize + 6, bitmap: "classic_frame_slot", scale: 3 },
-                { type: "text", x: 700, y: 43, text: "Item", font: { size: 20 } },
-                { type: "text", x: 820, y: 43, text: "Liquid", font: { size: 20 } }
+                { type: "frame", x: 20 - 3, y: 68 - 3, width: 960 + 6, height: ScreenHeight - 68 - 70 + 6, bitmap: "classic_frame_slot", scale: 3 },
+                { type: "frame", x: 20, y: ScreenHeight - 60, width: 230, height: 50, bitmap: "classic_frame_bg_light", scale: 1 },
+                { type: "text", x: 40, y: ScreenHeight - 27, text: "Item", font: { size: 20 } },
+                { type: "text", x: 160, y: ScreenHeight - 27, text: "Liquid", font: { size: 20 } }
             ],
-            elements: elements
+            elements: {
+                buttonClose: {
+                    type: "closeButton",
+                    x: 1000 - 45 - 9, y: 9, scale: 3,
+                    bitmap: "classic_close_button", bitmap2: "classic_close_button_down"
+                },
+                buttonSearch: {
+                    type: "button",
+                    x: 20, y: 15, scale: 0.8,
+                    bitmap: "mod_browser_search_field",
+                    clicker: {
+                        onClick: function () {
+                            runOnUiThread(function () {
+                                var editText = new android.widget.EditText(Context);
+                                editText.setHint("in this space");
+                                new android.app.AlertDialog.Builder(Context)
+                                    .setTitle("Please type the keywords")
+                                    .setView(editText)
+                                    .setPositiveButton("Search", new android.content.DialogInterface.OnClickListener({
+                                    onClick: function () {
+                                        var elements = _a.window.getElements();
+                                        var keyword = editText.getText() + "";
+                                        var regexp = new RegExp(keyword, "i");
+                                        elements.get("textSearch").setBinding("text", keyword.length ? keyword : "Search");
+                                        _a.list = ItemList.get().filter(function (item) { return item.name.match(regexp); });
+                                        _a.liqList = Object.keys(LiquidRegistry.liquids).filter(function (liquid) { return LiquidRegistry.getLiquidName(liquid).match(regexp); });
+                                        _a.page = 0;
+                                        _a.updateWindow();
+                                    }
+                                })).show();
+                            });
+                        }
+                    }
+                },
+                textSearch: {
+                    type: "text",
+                    x: 30, y: 25, z: 1,
+                    font: { color: Color.WHITE, size: 20 },
+                    text: "Search"
+                },
+                buttonSort: {
+                    type: "button",
+                    x: 450, y: 15, scale: 0.8,
+                    bitmap: "mod_browser_button", bitmap2: "mod_browser_button_down",
+                    clicker: { onClick: function (con, tile, elem) {
+                            _a.changeSortMode();
+                            _a.updateWindow();
+                        } }
+                },
+                textSort: {
+                    type: "text",
+                    x: 465, y: 25, z: 1,
+                    text: "",
+                    font: { color: Color.WHITE, size: 16, shadow: 0.5 }
+                },
+                buttonPlus: { type: "button", x: 800, y: 25, bitmap: "rv.button_plus", bitmap2: "rv.button_plus_pressed", scale: 2, clicker: {
+                        onClick: function () {
+                            _a.changeSlotXCount(-1);
+                        }
+                    } },
+                buttonMinus: { type: "button", x: 850, y: 25, bitmap: "rv.button_minus", bitmap2: "rv.button_minus_pressed", scale: 2, clicker: {
+                        onClick: function () {
+                            _a.changeSlotXCount(1);
+                        }
+                    } },
+                switchMode: { type: "switch", x: 93, y: ScreenHeight - 50, scale: 2, onNewState: function (state, container, elem) {
+                        World.isWorldLoaded() && _a.switchWindow(!!state);
+                    } },
+                buttonPrev: {
+                    type: "button",
+                    x: 520, y: ScreenHeight - 60, scale: 2,
+                    bitmap: "_button_prev_48x24", bitmap2: "_button_prev_48x24p",
+                    clicker: {
+                        onClick: function () {
+                            _a.page--;
+                            _a.updateWindow();
+                        }
+                    }
+                },
+                buttonNext: {
+                    type: "button",
+                    x: 1000 - 48 * 2 - 20, y: ScreenHeight - 60, scale: 2,
+                    bitmap: "_button_next_48x24", bitmap2: "_button_next_48x24p",
+                    clicker: {
+                        onClick: function () {
+                            _a.page++;
+                            _a.updateWindow();
+                        }
+                    }
+                },
+                textPage: { type: "text", x: 750, y: ScreenHeight - 75, font: { size: 40, align: UI.Font.ALIGN_CENTER } }
+            }
         });
-        window.addWindowInstance("list", _a.listWindow.item);
+        _a.setSlotCount(__config__.getNumber("slotCountX").intValue());
+        _a.refreshSlotsWindow();
+        window.addWindowInstance("list", _a.slotsWindow);
         window.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
         window.setBlockingBackground(true);
         window.setContainer(new UI.Container());
@@ -1083,11 +1132,15 @@ var SubUI = /** @class */ (function () {
             };
         }
         elements.cursor = { type: "image", x: 0, y: 0, z: 1, bitmap: "_selection", scale: 27.78 };
+        var location = this.window.getWindow("controller").getLocation();
         this.window.addWindow("tray", {
             location: {
-                x: 150, y: 10,
-                width: 60, height: 460,
-                scrollY: recipeTypeLength * 60
+                x: location.x + location.windowToGlobal(20),
+                y: location.y + location.windowToGlobal(20),
+                width: location.windowToGlobal(80),
+                height: location.getWindowHeight() - location.windowToGlobal(40),
+                padding: { top: location.windowToGlobal(20), bottom: location.windowToGlobal(20) },
+                scrollY: recipeTypeLength * location.windowToGlobal(80)
             },
             params: { slot: "_default_slot_empty" },
             drawing: [{ type: "background", color: Color.parseColor("#474343") }],
@@ -1210,6 +1263,7 @@ var SubUI = /** @class */ (function () {
         this.page = page < 0 ? this.list.length : page >= this.list.length ? 0 : page;
         elements.get("scrollPage").setBinding("raw-value", java.lang.Float.valueOf(this.page / (this.list.length - 1)));
         elements.get("textPage").setBinding("text", (this.page + 1) + " / " + this.list.length);
+        elements.get("textPage").setPosition(300 + (this.page < this.list.length / 2 ? 400 : 100), 590);
         recipeType.showRecipe(this.list[this.page]);
     };
     var _a;
@@ -1221,26 +1275,29 @@ var SubUI = /** @class */ (function () {
     SubUI.window = (function () {
         var window = new UI.WindowGroup();
         window.addWindow("controller", {
-            location: { x: 140, y: 0, width: 720, height: 480 },
+            location: { x: (1000 - ScreenHeight * 1.5) / 2, y: 0, width: ScreenHeight * 1.5, height: ScreenHeight },
             drawing: [
                 { type: "background", color: Color.TRANSPARENT },
-                { type: "frame", x: 0, y: 0, width: 1000, height: 666.7, bitmap: "default_frame_bg_light", scale: 4 }
+                { type: "frame", x: 0, y: 0, width: 1000, height: 1000 / 1.5, bitmap: "default_frame_bg_light", scale: 4 },
+                { type: "frame", x: 300, y: 590, width: 500, height: 60, bitmap: "default_scroll_bg", scale: 4 } //scroll background
             ],
             elements: {
-                textRecipe: { type: "text", x: 280, y: 20, font: { size: 40, color: Color.WHITE, shadow: 0.5 } },
-                textUsage: { type: "text", x: 280, y: 20, font: { size: 40, color: Color.GREEN, shadow: 0.5 } },
-                textAll: { type: "text", x: 280, y: 20, font: { size: 40, color: Color.YELLOW, shadow: 0.5 }, clicker: {
+                textRecipe: { type: "text", x: 280, y: 18, font: { size: 40, color: Color.WHITE, shadow: 0.5 } },
+                textUsage: { type: "text", x: 280, y: 18, font: { size: 40, color: Color.GREEN, shadow: 0.5 } },
+                textAll: { type: "text", x: 280, y: 18, font: { size: 40, color: Color.YELLOW, shadow: 0.5 },
+                    clicker: {
                         onClick: function (container, tile, elem) {
                             _a.openListView(RecipeTypeRegistry.getAllKeys());
                         }
                     },
                     onTouchEvent: function (elem, event) {
                         UiFuncs.popupTips("Show All Recipes", elem, event);
-                    } },
+                    }
+                },
                 buttonBack: {
                     type: "button",
-                    x: 120, y: 15, scale: 3,
-                    bitmap: "_craft_button_up", bitmap2: "_craft_button_down",
+                    x: 120, y: 20, scale: 0.8,
+                    bitmap: "mod_browser_back", bitmap2: "mod_browser_back_down",
                     clicker: {
                         onClick: function () {
                             _a.recent.pop();
@@ -1256,7 +1313,6 @@ var SubUI = /** @class */ (function () {
                         }
                     }
                 },
-                textBack: { type: "text", x: 150, y: 25, z: 1, text: "Back", font: { color: Color.WHITE, size: 30, shadow: 0.5 } },
                 buttonPrev: {
                     type: "button",
                     x: 250 - 48 * 2.5, y: 590, scale: 2.5,
@@ -1285,7 +1341,10 @@ var SubUI = /** @class */ (function () {
                 },
                 scrollPage: {
                     type: "scroll",
-                    x: 350, y: 595, length: 400,
+                    x: 300, y: 590, z: 1,
+                    length: 500 - 60 * 10 / 16, width: 60,
+                    bitmapBg: "_default_slot_empty",
+                    bitmapBgHover: "_default_slot_empty",
                     onTouchEvent: function (elem, event) {
                         var len = _a.list.length - 1;
                         var page = Math.round(event.localX * len);
@@ -1293,7 +1352,7 @@ var SubUI = /** @class */ (function () {
                         event.localX = page / len;
                     }
                 },
-                textPage: { type: "text", x: 575, y: 535, font: { size: 40, align: UI.Font.ALIGN_CENTER } }
+                textPage: { type: "text", x: 300 + 400, y: 590, font: { size: 32, align: UI.Font.ALIGN_CENTER } }
             }
         });
         window.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
@@ -1363,7 +1422,7 @@ var WorkbenchRecipe = /** @class */ (function (_super) {
                 input7: { x: 300, y: 300, size: 100 },
                 input8: { x: 400, y: 300, size: 100 },
                 output0: { x: 680, y: 190, size: 120 },
-                shapelessIcon: { type: "image", x: 740, y: 130, scale: 1.5, bitmap: "shapeless_icon" }
+                shapelessIcon: { type: "image", x: 740, y: 130, scale: 1.5, bitmap: "rv.shapeless_icon" }
             }
         }) || this;
     }
@@ -1407,7 +1466,7 @@ var WorkbenchRecipe = /** @class */ (function (_super) {
         return this.convertToJSArray(isUsage ? Recipes.getWorkbenchRecipesByIngredient(id, data2) : Recipes.getWorkbenchRecipesByResult(id, -1, data2));
     };
     WorkbenchRecipe.prototype.hasAnyRecipe = function (id, data, isUsage) {
-        return _super.prototype.hasAnyRecipe.call(this, id, Item.getMaxDamage(id) ? -1 : data, isUsage);
+        return this.getList(id, Item.getMaxDamage(id) ? -1 : data, isUsage).length > 0;
     };
     WorkbenchRecipe.prototype.onOpen = function (elements, recipe) {
         elements.get("shapelessIcon").setPosition(740, recipe.isShapeless ? 130 : 1000);
@@ -1449,7 +1508,7 @@ var FurnaceFuelRecipe = /** @class */ (function (_super) {
     function FurnaceFuelRecipe() {
         var _this = _super.call(this, "Furnace Fuel", VanillaBlockID.furnace, {
             drawing: [
-                { type: "bitmap", x: 290, y: 140, scale: 8, bitmap: "furnace_burn" }
+                { type: "bitmap", x: 290, y: 140, scale: 8, bitmap: "rv.furnace_burn" }
             ],
             elements: {
                 input0: { x: 280, y: 260, size: 120 },
@@ -1519,7 +1578,7 @@ var BrewingRecipe = /** @class */ (function (_super) {
         _this = _super.call(this, "Potion Brewing", VanillaBlockID.brewing_stand, {
             params: { slot: "classic_slot" },
             drawing: [
-                { type: "bitmap", x: 68, y: 60, scale: 4, bitmap: "brewing_stand_back" },
+                { type: "bitmap", x: 68, y: 60, scale: 4, bitmap: "rv.brewing_stand_back" },
                 { type: "text", x: 244 + 64, y: 440, text: "Source", font: font },
                 { type: "text", x: 628 + 64, y: 440, text: "Result", font: font }
             ],
@@ -1657,7 +1716,7 @@ var StonecutterRecipe = /** @class */ (function (_super) {
     function StonecutterRecipe() {
         return _super.call(this, "Stonecutter", VanillaBlockID.stonecutter_block, {
             drawing: [
-                { type: "bitmap", x: 455, y: 130, scale: 6, bitmap: "bar_stonecutter" }
+                { type: "bitmap", x: 455, y: 130, scale: 6, bitmap: "rv.bar_stonecutter" }
             ],
             elements: {
                 input0: { x: 440, y: 0, size: 120 },
@@ -1702,7 +1761,7 @@ var TradingRecipe = /** @class */ (function (_super) {
     function TradingRecipe() {
         var _this = _super.call(this, "Villager Trading", VanillaItemID.emerald, {
             drawing: [
-                { type: "bitmap", x: 506, y: 199, scale: 6, bitmap: "bar_trading" }
+                { type: "bitmap", x: 506, y: 199, scale: 6, bitmap: "rv.bar_trading" }
             ],
             elements: {
                 input0: { x: 250, y: 190, size: 120 },

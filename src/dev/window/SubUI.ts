@@ -43,26 +43,29 @@ class SubUI {
         const window = new UI.WindowGroup();
 
         window.addWindow("controller", {
-            location: {x: 140, y: 0, width: 720, height: 480},
+            location: {x: (1000 - ScreenHeight * 1.5) / 2, y: 0, width: ScreenHeight * 1.5, height: ScreenHeight},
             drawing: [
                 {type: "background", color: Color.TRANSPARENT},
-                {type: "frame", x: 0, y: 0, width: 1000, height: 666.7, bitmap: "default_frame_bg_light", scale: 4}
+                {type: "frame", x: 0, y: 0, width: 1000, height: 1000 / 1.5, bitmap: "default_frame_bg_light", scale: 4},
+                {type: "frame", x: 300, y: 590, width: 500, height: 60, bitmap: "default_scroll_bg", scale: 4}//scroll background
             ],
             elements: {
-                textRecipe: {type: "text", x: 280, y: 20, font: {size: 40, color: Color.WHITE, shadow: 0.5}},
-                textUsage: {type: "text", x: 280, y: 20, font: {size: 40, color: Color.GREEN, shadow: 0.5}},
-                textAll: {type: "text", x: 280, y: 20, font: {size: 40, color: Color.YELLOW, shadow: 0.5}, clicker: {
-                    onClick: (container, tile, elem) => {
-                        this.openListView(RecipeTypeRegistry.getAllKeys());
+                textRecipe: {type: "text", x: 280, y: 18, font: {size: 40, color: Color.WHITE, shadow: 0.5}},
+                textUsage: {type: "text", x: 280, y: 18, font: {size: 40, color: Color.GREEN, shadow: 0.5}},
+                textAll: {type: "text", x: 280, y: 18, font: {size: 40, color: Color.YELLOW, shadow: 0.5},
+                    clicker: {
+                        onClick: (container, tile, elem) => {
+                            this.openListView(RecipeTypeRegistry.getAllKeys());
+                        }
+                    },
+                    onTouchEvent: (elem, event) => {
+                        UiFuncs.popupTips("Show All Recipes", elem, event);
                     }
                 },
-                onTouchEvent: (elem, event) => {
-                    UiFuncs.popupTips("Show All Recipes", elem, event);
-                }},
                 buttonBack: {
                     type: "button",
-                    x: 120, y: 15, scale: 3,
-                    bitmap: "_craft_button_up", bitmap2: "_craft_button_down",
+                    x: 120, y: 20, scale: 0.8,
+                    bitmap: "mod_browser_back", bitmap2: "mod_browser_back_down",
                     clicker: {
                         onClick: () => {
                             this.recent.pop();
@@ -78,7 +81,6 @@ class SubUI {
                         }
                     }
                 },
-                textBack: {type: "text", x: 150, y: 25, z: 1, text: "Back",font: {color: Color.WHITE, size: 30, shadow: 0.5}},
                 buttonPrev: {
                     type: "button",
                     x: 250 - 48 * 2.5, y: 590, scale: 2.5,
@@ -107,7 +109,10 @@ class SubUI {
                 },
                 scrollPage: {
                     type: "scroll",
-                    x: 350, y: 595, length: 400,
+                    x: 300, y: 590, z: 1,
+                    length: 500 - 60 * 10 / 16, width: 60,
+                    bitmapBg: "_default_slot_empty",
+                    bitmapBgHover: "_default_slot_empty",
                     onTouchEvent: (elem, event) => {
                         const len = this.list.length - 1;
                         const page = Math.round(event.localX * len);
@@ -115,7 +120,7 @@ class SubUI {
                         event.localX = page / len;
                     }
                 },
-                textPage: {type: "text", x: 575, y: 535, font: {size: 40, align: UI.Font.ALIGN_CENTER}}
+                textPage: {type: "text", x: 300 + 400, y: 590, font: {size: 32, align: UI.Font.ALIGN_CENTER}}
             }
         });
 
@@ -165,11 +170,16 @@ class SubUI {
 
         elements.cursor = {type: "image", x: 0, y: 0, z: 1, bitmap: "_selection", scale: 27.78};
 
+        const location = this.window.getWindow("controller").getLocation();
+
         this.window.addWindow("tray", {
             location: {
-                x: 150, y: 10,
-                width: 60, height: 460,
-                scrollY: recipeTypeLength * 60
+                x: location.x + location.windowToGlobal(20),
+                y: location.y + location.windowToGlobal(20),
+                width: location.windowToGlobal(80),
+                height: location.getWindowHeight() - location.windowToGlobal(40),
+                padding: {top: location.windowToGlobal(20), bottom: location.windowToGlobal(20)},
+                scrollY: recipeTypeLength * location.windowToGlobal(80)
             },
             params: {slot: "_default_slot_empty"},
             drawing: [{type: "background", color: Color.parseColor("#474343")}],
@@ -315,6 +325,7 @@ class SubUI {
         this.page = page < 0 ? this.list.length : page >= this.list.length ? 0 : page;
         elements.get("scrollPage").setBinding("raw-value", java.lang.Float.valueOf(this.page / (this.list.length - 1)));
         elements.get("textPage").setBinding("text", (this.page + 1) + " / " + this.list.length);
+        elements.get("textPage").setPosition(300 + (this.page < this.list.length / 2 ? 400 : 100), 590);
         recipeType.showRecipe(this.list[this.page]);
     }
 

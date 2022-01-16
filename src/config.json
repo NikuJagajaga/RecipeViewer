@@ -1,7 +1,8 @@
 {
-  "enabled":true,
-  "ButtonPosition":{
-    "x":-160,
-    "y":-70
-  }
+  "enabled": true,
+  "ButtonPosition": {
+    "x": -160,
+    "y": -70
+  },
+  "slotCountX": 12
 }

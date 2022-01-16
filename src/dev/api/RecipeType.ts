@@ -55,8 +55,30 @@ abstract class RecipeType {
             }
         }
 
-        //@ts-ignore
-        this.window.setContent({location: {x: 230, y: 55, width: 600, height: 340}, params: content.params, drawing: content.drawing, elements: content.elements});
+        /*
+        before
+        x: 230,
+        y: 55,
+        width: 600,
+        height: 340
+        */
+
+        //same as SubUI Window "controller"
+        const location = new UI.WindowLocation({x: (1000 - ScreenHeight * 1.5) / 2, y: 0, width: ScreenHeight * 1.5, height: ScreenHeight});
+
+        this.window.setContent({
+            location: {
+                x: location.x + location.windowToGlobal(120),
+                y: location.y + location.windowToGlobal(75),
+                padding: {top: location.y + location.windowToGlobal(75), bottom: location.windowToGlobal(75)},
+                width: location.windowToGlobal(860),
+                height: ScreenHeight - location.windowToGlobal(75)
+            },
+            params: content.params,
+            drawing: content.drawing,
+            //@ts-ignore
+            elements: content.elements
+        });
 
         const elements = this.window.getElements();
         for(let i = 0; i < inputSlotSize; i++){

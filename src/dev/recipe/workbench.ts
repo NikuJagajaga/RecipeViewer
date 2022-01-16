@@ -16,7 +16,7 @@ class WorkbenchRecipe extends RecipeType {
                 input7: {x: 300, y: 300, size: 100},
                 input8: {x: 400, y: 300, size: 100},
                 output0: {x: 680, y: 190, size: 120},
-                shapelessIcon: {type: "image", x: 740, y: 130, scale: 1.5, bitmap: "shapeless_icon"}
+                shapelessIcon: {type: "image", x: 740, y: 130, scale: 1.5, bitmap: "rv.shapeless_icon"}
             }
         });
     }
@@ -64,7 +64,7 @@ class WorkbenchRecipe extends RecipeType {
     }
 
     hasAnyRecipe(id: number, data: number, isUsage: boolean): boolean {
-        return super.hasAnyRecipe(id, Item.getMaxDamage(id) ? -1 : data, isUsage);
+        return this.getList(id, Item.getMaxDamage(id) ? -1 : data, isUsage).length > 0;
     }
 
     onOpen(elements: java.util.HashMap<string, UI.Element>, recipe: RecipePattern): void {

@@ -1,0 +1,15 @@
+{
+    "properties": {
+        "enabled": {
+            "name": {"en": "Enable mod"},
+            "index": 0
+        },
+        "slotCountX": {
+            "name": {"en": "Number of horizontal slots in the ItemListWindow"},
+            "index": 1,
+            "type": "SeekBar",
+            "min": 8,
+            "max": 24
+        }
+    }
+}

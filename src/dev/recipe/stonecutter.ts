@@ -23,7 +23,7 @@ class StonecutterRecipe extends RecipeType {
     constructor(){
         super("Stonecutter", VanillaBlockID.stonecutter_block, {
             drawing: [
-                {type: "bitmap", x: 455, y: 130, scale: 6, bitmap: "bar_stonecutter"}
+                {type: "bitmap", x: 455, y: 130, scale: 6, bitmap: "rv.bar_stonecutter"}
             ],
             elements: {
                 input0: {x: 440, y: 0, size: 120},

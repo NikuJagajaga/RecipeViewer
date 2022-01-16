@@ -36,7 +36,7 @@ class TradingRecipe extends RecipeType {
     constructor(){
         super("Villager Trading", VanillaItemID.emerald, {
             drawing: [
-                {type: "bitmap", x: 506, y: 199, scale: 6, bitmap: "bar_trading"}
+                {type: "bitmap", x: 506, y: 199, scale: 6, bitmap: "rv.bar_trading"}
             ],
             elements: {
                 input0: {x: 250, y: 190, size: 120},
