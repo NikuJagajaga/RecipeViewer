@@ -52,3 +52,10 @@ const runOnUiThread = (func: () => void) => {
         }
     }));
 }
+
+
+const SafeInsets: {left: number, right: number} = (() => {
+    //@ts-ignore
+    const cutout: android.view.DisplayCutout = Context.getWindowManager().getCurrentWindowMetrics().getWindowInsets().getDisplayCutout();
+    return {left: cutout.getSafeInsetLeft(), right: cutout.getSafeInsetRight()};
+})();

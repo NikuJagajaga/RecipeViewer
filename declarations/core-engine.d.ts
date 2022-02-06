@@ -2216,27 +2216,34 @@ declare function importLib(name: string, value?: string): void;
  * @param value name of the function or value you wish to import, or "*" to
  * import the whole library. Defaults to importing the whole library
  */
-declare function IMPORT(name: string, value?: string): void;
+ declare function IMPORT(name: string, value?: string): void;
 
-/**
- * Injects methods from C++ into the target object to use in the mod
- * @param name name of the module, as registered from native code
- * @param target target object, where all the methods from native module will be
- * injected
- */
-declare function IMPORT_NATIVE(name: string, target: object): any;
+ /**
+  * Injects methods from C++ into the target object to use in the mod
+  * @param name name of the module, as registered from native code
+  * @param target target object, where all the methods from native module will be
+  * injected
+  */
+ declare function IMPORT_NATIVE(name: string, target: object): any;
 
-/**
- * Allows to create new JS modules imported from C++ code and use it in the mod
- * @param name name of the module, as registered from native code
- * @returns js module, implemented in native (C++) code
- */
-declare function WRAP_NATIVE(name: string): object;
+ /**
+  * Allows to create new JS modules imported from C++ code and use it in the mod
+  * @param name name of the module, as registered from native code
+  * @returns js module, implemented in native (C++) code
+  */
+ declare function WRAP_NATIVE<T = any>(name: string): T;
 
-/**
- * @returns current Core Engine API level
- */
-declare function getCoreAPILevel(): number;
+ /**
+  * Allows to create new JS modules imported from Java code and use it in the mod
+  * @param name name of the module, as registered from Java code
+  * @returns js module, implemented in Java code
+  */
+ declare function WRAP_JAVA<T = any>(name: string): T;
+
+ /**
+  * @returns current Core Engine API level
+  */
+ declare function getCoreAPILevel(): number;
 
 /**
  * Runs specified funciton in the main thread
@@ -9438,8 +9445,7 @@ declare namespace UI {
 	 * Represents window of required size that can be opened in container to
 	 * provide any required UI facilities
 	 */
-	class Window implements IWindow {
-        layout: android.view.ViewGroup;
+     class Window implements IWindow {
 
 		/**
 		 * Constructs new [[Window]] object with specified bounds
@@ -9461,13 +9467,13 @@ declare namespace UI {
 		constructor();
 
 		/**
-		 * Opens window wihout container. It is usually mor
+		 * Opens window without container. It is usually mor
 		 */
 		open(): void;
 
 		/**
 		 * Adds another window as adjacent window, so that several windows open
-		 * at the same time. This allows to devide window into separate parts
+		 * at the same time. This allows to divide window into separate parts
 		 * and treat them separately.
 		 * @param window another window to be added as adjacent
 		 */
@@ -9546,7 +9552,7 @@ declare namespace UI {
 		 * @returns [[Container]] that was used to open this window or null, if
 		 * the window wasn't opened in container
 		 */
-		getContainer(): Container;
+		getContainer(): Nullable<Container>;
 
 		/**
 		 * Sets container for the current window. Be careful when calling it
@@ -9603,7 +9609,7 @@ declare namespace UI {
 		/**
 		 * @returns true if the window is game overlay, false otherwise
 		 */
-		isNotFocusable(): void;
+		isNotFocusable(): boolean;
 
 		/**
 		 * Specifies the content of the window
@@ -9620,7 +9626,7 @@ declare namespace UI {
 
 		/**
 		 * @param inventoryNeeded specify true if the window requires player's
-		 * inventoty. Default value is false
+		 * inventory. Default value is false
 		 */
 		setInventoryNeeded(inventoryNeeded: boolean): void;
 
@@ -9688,6 +9694,27 @@ declare namespace UI {
 		 * Writes debug information about current window to the log
 		 */
 		debug(): void;
+
+		/**
+		 * @returns whether the window can be closed on pressing back navigation button
+		 */
+		onBackPressed(): boolean;
+
+		/**
+		 * Gives the property to be closed on pressing back navigation button to the given window
+		 */
+		setCloseOnBackPressed(val: boolean): void;
+
+
+		/**
+		 * Set background color of window
+		 * @param color integer color value (you can specify it using hex value)
+		 */
+		setBackgroundColor(color: number): void;
+
+		updateScrollDimensions(): void;
+
+		updateWindowPositionAndSize(): void;
 	}
 
 
@@ -9696,7 +9723,7 @@ declare namespace UI {
 	 * [[StandartWindow]] is a window group that consists of several separate
 	 * windows
 	 */
-	class WindowGroup implements IWindow {
+     class WindowGroup implements IWindow {
 		/**
 		 * Constructs new [[WindowGroup]] instance
 		 */
@@ -9719,7 +9746,7 @@ declare namespace UI {
 		 * Creates a new window using provided description and adds it to the
 		 * group
 		 * @param name window name
-		 * @param content window descripion object
+		 * @param content window description object
 		 * @returns created [[Window]] object
 		 */
 		addWindow(name: string, content: WindowContent): Window;
@@ -9729,7 +9756,7 @@ declare namespace UI {
 		 * @returns window from the group by its name or null if no window with
 		 * such a name was added
 		 */
-		getWindow(name: string): Window;
+		getWindow(name: string): Nullable<Window>;
 
 		/**
 		 * @param name window name
@@ -9741,7 +9768,7 @@ declare namespace UI {
 		/**
 		 * Sets content for the window by its name
 		 * @param name window name
-		 * @param content content pbkect
+		 * @param content content object
 		 */
 		setWindowContent(name: string, content: WindowContent): void;
 
@@ -9773,9 +9800,10 @@ declare namespace UI {
 		 * @param name window name
 		 */
 		moveOnTop(name: string): void;
+
 		/**
-				 * Opens window wihout container. It is usually mor
-				 */
+		 * Opens window without container. It is usually mor
+		 */
 		open(): void;
 
 		/**
@@ -9863,7 +9891,17 @@ declare namespace UI {
 		 */
 		setDebugEnabled(enabled: boolean): void;
         setBlockingBackground(blockingBackground: boolean): void;
+		/**
+		 * @returns whether the window group can be closed on pressing back navigation button
+		 */
+		onBackPressed(): boolean;
+
+		/**
+		 * Gives the property to be closed on pressing back navigation button to the given window group
+		 */
+		setCloseOnBackPressed(val: boolean): void;
 	}
+
 
 
 	/**
@@ -10752,7 +10790,9 @@ declare namespace UI {
         source?: ItemInstance;
         elementRect: android.graphics.Rect;
         isTouched: boolean;
+        isDarken: boolean;
         window: Window;
+        texture: Texture;
 		/**
 		 * Creates a new [[Texture]] instance with specified [[Style]] applied.
 		 * See [[Texture.constructor]] for parameters description
@@ -11091,6 +11131,7 @@ declare namespace UI {
     type TouchEventType = "DOWN" | "UP" | "MOVE" | "CLICK" | "LONG_CLICK" | "CANCEL";
 
 	interface UIElement {
+        [key: string]: any;
 		/**
 		 * Type of a [[UIElement]]
 		 */
@@ -11154,7 +11195,7 @@ declare namespace UI {
 		/**
 		 * Bitmap of [[UIElement]]
 		 */
-		bitmap?: string;
+		bitmap?: string | any;
 
 		/**
 		 * Second bitmap of [[UIElement]]

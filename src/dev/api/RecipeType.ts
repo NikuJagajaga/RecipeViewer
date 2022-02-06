@@ -1,8 +1,6 @@
 const McFontPaint: android.graphics.Paint = (() => {
-    const NativeAPI = ModAPI.requireGlobal("requireMethodFromNativeAPI");
-    const getMcTypeface = NativeAPI("utils.FileTools", "getMcTypeface");
     const paint = new android.graphics.Paint();
-    paint.setTypeface(getMcTypeface());
+    paint.setTypeface(WRAP_JAVA("com.zhekasmirnov.innercore.utils.FileTools").getMcTypeface());
     paint.setTextSize(24);
     return paint;
 })();
@@ -126,16 +124,18 @@ abstract class RecipeType {
 
     getList(id: number, data: number, isUsage: boolean): RecipePattern[] {
         const list = this.getAllList();
+        const callback = item => item.id === id && (data === -1 || item.data === -1 || item.data === data);
         return isUsage ?
-            list.filter(recipe => recipe.input ? recipe.input.some(item => item.id === id && (data === -1 || item.data === data)) : false) :
-            list.filter(recipe => recipe.output ? recipe.output.some(item => item.id === id && (data === -1 || item.data === data)) : false);
+            list.filter(recipe => recipe.input ? recipe.input.some(callback) : false) :
+            list.filter(recipe => recipe.output ? recipe.output.some(callback) : false);
     }
 
     getListByLiquid(liquid: string, isUsage: boolean): RecipePattern[] {
         const list = this.getAllList();
+        const callback = liq => liq.liquid === liquid;
         return isUsage ?
-            list.filter(recipe => recipe.inputLiq ? recipe.inputLiq.some(liq => liq.liquid === liquid) : false) :
-            list.filter(recipe => recipe.outputLiq ? recipe.outputLiq.some(liq => liq.liquid === liquid) : false);
+            list.filter(recipe => recipe.inputLiq ? recipe.inputLiq.some(callback) : false) :
+            list.filter(recipe => recipe.outputLiq ? recipe.outputLiq.some(callback) : false);
     }
 
     hasAnyRecipe(id: number, data: number, isUsage: boolean): boolean {
@@ -143,9 +143,10 @@ abstract class RecipeType {
         if(list.length === 0){
             return this.getList(id, data, isUsage).length > 0;
         }
+        const callback = item => item && item.id === id && (data === -1 || item.data === -1 || item.data === data);
         return isUsage ?
-            list.some(recipe => recipe.input ? recipe.input.some(item => item && item.id === id && (data === -1 || item.data === data)) : false) :
-            list.some(recipe => recipe.output ? recipe.output.some(item => item && item.id === id && (data === -1 || item.data === data)) : false);
+            list.some(recipe => recipe.input ? recipe.input.some(callback) : false) :
+            list.some(recipe => recipe.output ? recipe.output.some(callback) : false);
     }
 
     hasAnyRecipeByLiquid(liquid: string, isUsage: boolean): boolean {
@@ -153,9 +154,10 @@ abstract class RecipeType {
         if(list.length === 0){
             return this.getListByLiquid(liquid, isUsage).length > 0;
         }
+        const callback = liq => liq && liq.liquid === liquid;
         return isUsage ?
-            list.some(recipe => recipe.inputLiq ? recipe.inputLiq.some(liq => liq && liq.liquid === liquid) : false) :
-            list.some(recipe => recipe.outputLiq ? recipe.outputLiq.some(liq => liq && liq.liquid === liquid) : false);
+            list.some(recipe => recipe.inputLiq ? recipe.inputLiq.some(callback) : false) :
+            list.some(recipe => recipe.outputLiq ? recipe.outputLiq.some(callback) : false);
     }
 
     onOpen(elements: java.util.HashMap<string, UI.Element>, recipe: RecipePattern): void {

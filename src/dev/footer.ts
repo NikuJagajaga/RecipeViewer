@@ -66,6 +66,7 @@ Callback.addCallback("LevelLoaded", () => {
         const time = Debug.sysTime();
         ItemList.addModItems();
         ItemList.setup();
+        __config__.getBool("loadIcon") && ItemList.cacheIcons();
         SubUI.setupWindow();
         Game.message(`Recipe Viewer is ready (${Debug.sysTime() - time} ms)`);
     });

@@ -66,6 +66,8 @@ declare abstract class RecipeType {
 declare interface RecipeTypeRegistry {
     register(key: string, recipeType: RecipeType): void;
     openRecipePage(key: string | string[]): void;
+    openRecipePageByItem(id: number, data: number, isUsage: boolean): boolean;
+    openRecipePageByLiquid(liquid: string, isUsage: boolean): boolean;
 }
 declare interface ItemList {
     get(): ItemInfo[];

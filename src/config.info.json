@@ -4,9 +4,13 @@
             "name": {"en": "Enable mod"},
             "index": 0
         },
+        "loadIcon": {
+            "name": {"en": "Load Icons on Startup"},
+            "index": 1
+        },
         "slotCountX": {
             "name": {"en": "Number of horizontal slots in the ItemListWindow"},
-            "index": 1,
+            "index": 2,
             "type": "SeekBar",
             "min": 8,
             "max": 24

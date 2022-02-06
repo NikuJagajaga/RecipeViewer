@@ -2,10 +2,12 @@ namespace UiFuncs {
 
     export const slotClicker: UI.UIClickEvent = {
         onClick: (container, tile, elem) => {
-            SubUI.openItemView(elem.source.id, elem.source.data, false) && show404Anim(elem);
+            const source = elem.getBinding("source");
+            SubUI.openItemView(source.id, source.data, false) && show404Anim(elem);
         },
         onLongClick: (container, tile, elem) => {
-            SubUI.openItemView(elem.source.id, elem.source.data, true) && show404Anim(elem);
+            const source = elem.getBinding("source");
+            isDuringPopup(elem) || SubUI.openItemView(source.id, source.data, true) && show404Anim(elem);
         }
     };
 
@@ -14,7 +16,7 @@ namespace UiFuncs {
             SubUI.openLiquidView(RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + ""), false) && show404Anim(elem);
         },
         onLongClick: (container, tile, elem) => {
-            SubUI.openLiquidView(RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + ""), true) && show404Anim(elem);
+            isDuringPopup(elem) || SubUI.openLiquidView(RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + ""), true) && show404Anim(elem);
         }
     };
 
@@ -24,14 +26,13 @@ namespace UiFuncs {
             drawing: [{type: "background", color: Color.TRANSPARENT}],
             elements: {
                 popupFrame: {
-                    type: "scale",
+                    type: "image",
                     x: -1000,
                     y: -1000,
                     width: 64,
                     height: 64,
                     scale: 3,
-                    bitmap: "workbench_frame3",
-                    value: 1
+                    bitmap: "workbench_frame3"
                 },
                 popupText: {
                     type: "text",
@@ -78,14 +79,15 @@ namespace UiFuncs {
         const elements = elem.window.getParentWindow().getElements();
         const text = elements.get("popupText");
         const frame = elements.get("popupFrame");
-        if(str && event.type == "MOVE"){
+        const MOVEtoLONG_CLICK = event.type == "LONG_CLICK" && frame.x !== -1000 && frame.y !== -1000;
+        if(str && (event.type == "MOVE" || MOVEtoLONG_CLICK)){
             const frameTex = UI.FrameTextureSource.get("workbench_frame3");
             const width = McFontPaint.measureText(str) + 30;
             const location = elem.window.getLocation();
             const x = location.x + location.windowToGlobal(event.x);
             const y = location.y + location.windowToGlobal(event.y);
+            frame.texture = new UI.Texture(frameTex.expandAndScale(width, 48, 3, frameTex.getCentralColor()));
             frame.setSize(width, 48);
-            frame.setBinding("texture", frameTex.expandAndScale(width, 48, 3, frameTex.getCentralColor()));
             frame.setPosition(Math_clamp(x - width / 2, 0, 1000 - width), Math.max(y - 100, 0));
             text.setPosition(Math_clamp(x, width / 2, 1000 - width / 2), Math.max(y - 100, 0) - 3);
             text.setBinding("text", str);
@@ -96,7 +98,13 @@ namespace UiFuncs {
         }
     }
 
+    const isDuringPopup = (elem: UI.Element): boolean => {
+        const frame = elem.window.getParentWindow().getElements().get("popupFrame");
+        return frame.x !== -1000 && frame.y !== -1000;
+    }
+
     export const onTouchSlot = (elem: UI.Element, event: {x: number, y: number, localX: number, localY: number, type: TouchEventType}): void => {
+        //elem.isDarken = event.type != "UP";
         popupTips(elem.source.id !== 0 ? ItemList.getName(elem.source.id, elem.source.data) : "", elem, event);
     }
 

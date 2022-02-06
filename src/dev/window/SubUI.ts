@@ -42,7 +42,7 @@ class SubUI {
 
         const window = new UI.WindowGroup();
 
-        window.addWindow("controller", {
+        const controller = window.addWindow("controller", {
             location: {x: (1000 - ScreenHeight * 1.5) / 2, y: 0, width: ScreenHeight * 1.5, height: ScreenHeight},
             drawing: [
                 {type: "background", color: Color.TRANSPARENT},
@@ -76,7 +76,6 @@ class SubUI {
                             this.window.close();
                         },
                         onLongClick: () => {
-                            this.recent.length = 0;
                             this.window.close();
                         }
                     }
@@ -127,11 +126,25 @@ class SubUI {
         window.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
         window.setContainer(new UI.Container());
         window.setBlockingBackground(true);
+        window.setCloseOnBackPressed(true);
+
+        controller.setEventListener({
+            onOpen: () => {
+                MainUI.isOpened() && MainUI.setCloseOnBackPressed(false);
+            },
+            onClose: () => {
+                this.recent.length = 0;
+                MainUI.isOpened() && MainUI.setCloseOnBackPressed(true);
+            }
+        });
 
         return window;
 
     })();
 
+    static isOpened(): boolean {
+        return this.window.isOpened();
+    }
 
     static setupWindow(): void {
 
@@ -257,28 +270,28 @@ class SubUI {
 
         try{
 
-        const elements = this.window.getWindow("tray").getElements();
-        const view = this.getView();
-        const length = RecipeTypeRegistry.getLength();
-        let recipeType: RecipeType;
-        let icon: UI.Element;
-        let description: UI.Element;
+            const elements = this.window.getWindow("tray").getElements();
+            const view = this.getView();
+            const length = RecipeTypeRegistry.getLength();
+            let recipeType: RecipeType;
+            let icon: UI.Element;
+            let description: UI.Element;
 
-        for(let i = 0; i < length; i++){
-            icon = elements.get("icon" + i);
-            description = elements.get("description" + i);
-            if(view.tray[i]){
-                recipeType = RecipeTypeRegistry.get(view.tray[i]);
-                icon.setBinding("source", recipeType.getIcon());
-                description.setBinding("text", recipeType.getDescription());
+            for(let i = 0; i < length; i++){
+                icon = elements.get("icon" + i);
+                description = elements.get("description" + i);
+                if(view.tray[i]){
+                    recipeType = RecipeTypeRegistry.get(view.tray[i]);
+                    icon.setBinding("source", recipeType.getIcon());
+                    description.setBinding("text", recipeType.getDescription());
+                }
+                else{
+                    icon.setBinding("source", {id: 0, count: 0, data: 0});
+                    description.setBinding("text", "");
+                }
             }
-            else{
-                icon.setBinding("source", {id: 0, count: 0, data: 0});
-                description.setBinding("text", "");
-            }
-        }
 
-        this.changeWindow(0);
+            this.changeWindow(0);
 
         }
         catch(e){

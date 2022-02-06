@@ -54,8 +54,16 @@ class RecipeTypeRegistry {
         return array;
     }
 
-    static openRecipePage (recipeKey: string | string[]): void {
+    static openRecipePage(recipeKey: string | string[]): void {
         SubUI.openListView(typeof recipeKey === "string" ? [recipeKey] : recipeKey);
+    }
+
+    static openRecipePageByItem(id: number, data: number, isUsage: boolean): boolean {
+        return SubUI.openItemView(id, data, isUsage);
+    }
+
+    static openRecipePageByLiquid(liquid: string, isUsage: boolean): boolean {
+        return SubUI.openLiquidView(liquid, isUsage);
     }
 
     static getLiquidByTex(texture: string): string {

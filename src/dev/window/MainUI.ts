@@ -1,5 +1,7 @@
 class MainUI {
 
+    private static readonly INNER_WIDTH = 960;
+
     private static page = 0;
     private static list: ItemInfo[] = [];
 
@@ -37,7 +39,7 @@ class MainUI {
     static readonly tankCount = 8;
 
     private static calcSlotCountY(): number {
-        const slotSize = 960 / this.slotCountX;
+        const slotSize = this.INNER_WIDTH / this.slotCountX;
         let count = 0;
         while(68 + slotSize * count <= ScreenHeight - 70){
             count++;
@@ -66,9 +68,8 @@ class MainUI {
 
     private static refreshSlotsWindow(): void {
 
-        const width = 960;
-        const height = this.slotCountY * (960 / this.slotCountX);
-        const location: UI.WindowLocationParams = {x: 20, y: 68, width: width, height: height};
+        const height = this.slotCountY * (this.INNER_WIDTH / this.slotCountX);
+        const location: UI.WindowLocationParams = {x: 20, y: 68, width: this.INNER_WIDTH, height: height};
         const slotSize = 1000 / this.slotCountX;
         const elemSlot: UI.UIElementSet = {};
 
@@ -100,9 +101,8 @@ class MainUI {
 
     private static tanksWindow: UI.Window = (() => {
 
-        const width = 960;
         const height = ScreenHeight - 68 - 70;
-        const location: UI.WindowLocationParams = {x: 20, y: 68, width: width, height: height};
+        const location: UI.WindowLocationParams = {x: 20, y: 68, width: this.INNER_WIDTH, height: height};
         const drawTank: UI.DrawingElement[] = [{type: "background", color: UI.FrameTextureSource.get("classic_frame_slot").getCentralColor()}];
         const elemTank: UI.UIElementSet = {};
 
@@ -143,7 +143,7 @@ class MainUI {
         const window = new UI.WindowGroup();
         const slotSize = 960 / this.slotCountX;
 
-        window.addWindow("controller", {
+        const controller = window.addWindow("controller", {
             location: {x: 0, y: 0, width: 1000, height: ScreenHeight},
             drawing: [
                 {type: "background", color: Color.TRANSPARENT},
@@ -220,6 +220,7 @@ class MainUI {
                 }},
                 switchMode: {type: "switch", x: 93, y: ScreenHeight - 50, scale: 2, onNewState: (state, container, elem) => {
                     World.isWorldLoaded() && this.switchWindow(!!state);
+                    //elem.texture = new UI.Texture(UI.TextureSource.get("default_switch" + (state ? "on" : "off")));
                 }},
                 buttonPrev: {
                     type: "button",
@@ -251,10 +252,11 @@ class MainUI {
         this.refreshSlotsWindow();
         window.addWindowInstance("list", this.slotsWindow);
         window.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
-        window.setBlockingBackground(true);
         window.setContainer(new UI.Container());
+        window.setBlockingBackground(true);
+        window.setCloseOnBackPressed(true);
 
-        window.getWindow("controller").setEventListener({
+        controller.setEventListener({
             onOpen: () => {
                 StartButton.close();
             },
@@ -267,6 +269,13 @@ class MainUI {
 
     })();
 
+    static setCloseOnBackPressed(val: boolean): void {
+        this.window.setCloseOnBackPressed(val);
+    }
+
+    static isOpened(): boolean {
+        return this.window.isOpened();
+    }
 
     static switchWindow(liquidMode: boolean, force?: boolean): void {
         if(!force && this.liquidMode === liquidMode){
@@ -293,13 +302,15 @@ class MainUI {
 
 
     static updateWindow(): void {
+
         let elements = this.window.getElements();
+        let elem: UI.Element;
         const maxPage = this.liquidMode ? (this.liqList.length / this.tankCount | 0) + 1 : (this.list.length / this.slotCount | 0) + 1;
         this.page = this.page < 0 ? maxPage - 1 : this.page >= maxPage ? 0 : this.page;
         elements.get("textPage").setBinding("text", (this.page + 1) + " / " + maxPage);
+
         if(this.liquidMode){
             elements = this.tanksWindow.getElements();
-            let elem: UI.Element;
             let liquid: string;
             for(let i = 0; i < this.tankCount; i++){
                 elem = elements.get("tank" + i);
@@ -322,6 +333,7 @@ class MainUI {
                 elements.get("slot" + i).setBinding("source", item ? {id: item.id, count: 1, data: item.data} : {id: 0, count: 0, data: 0});
             }
         }
+
     }
 
 

@@ -1,5 +1,6 @@
 {
   "enabled": true,
+  "loadIcon": false,
   "ButtonPosition": {
     "x": -160,
     "y": -70

@@ -59,6 +59,11 @@ var runOnUiThread = function (func) {
         }
     }));
 };
+var SafeInsets = (function () {
+    //@ts-ignore
+    var cutout = Context.getWindowManager().getCurrentWindowMetrics().getWindowInsets().getDisplayCutout();
+    return { left: cutout.getSafeInsetLeft(), right: cutout.getSafeInsetRight() };
+})();
 var BehaviorTools = /** @class */ (function () {
     function BehaviorTools() {
     }
@@ -160,6 +165,7 @@ var BehaviorTools = /** @class */ (function () {
     BehaviorTools.potionMeta = {};
     return BehaviorTools;
 }());
+var ItemIconSource = WRAP_JAVA("com.zhekasmirnov.innercore.api.mod.ui.icon.ItemIconSource").instance;
 var ItemList = /** @class */ (function () {
     function ItemList() {
     }
@@ -248,6 +254,10 @@ var ItemList = /** @class */ (function () {
         }
     };
     ItemList.getName = function (id, data) {
+        var find = this.list.find(function (item) { return item.id === id && item.data === data; });
+        if (find && find.name) {
+            return find.name;
+        }
         var name = "";
         try {
             name = Item.getName(id, data === -1 ? 0 : data);
@@ -273,6 +283,11 @@ var ItemList = /** @class */ (function () {
             item.name = _this.getName(item.id, item.data);
         });
     };
+    ItemList.cacheIcons = function () {
+        this.list.forEach(function (item) {
+            ItemIconSource.getScaledIcon(item.id, item.data, 16);
+        });
+    };
     ItemList.list = [];
     return ItemList;
 }());
@@ -280,10 +295,12 @@ var UiFuncs;
 (function (UiFuncs) {
     UiFuncs.slotClicker = {
         onClick: function (container, tile, elem) {
-            SubUI.openItemView(elem.source.id, elem.source.data, false) && UiFuncs.show404Anim(elem);
+            var source = elem.getBinding("source");
+            SubUI.openItemView(source.id, source.data, false) && UiFuncs.show404Anim(elem);
         },
         onLongClick: function (container, tile, elem) {
-            SubUI.openItemView(elem.source.id, elem.source.data, true) && UiFuncs.show404Anim(elem);
+            var source = elem.getBinding("source");
+            isDuringPopup(elem) || SubUI.openItemView(source.id, source.data, true) && UiFuncs.show404Anim(elem);
         }
     };
     UiFuncs.tankClicker = {
@@ -291,7 +308,7 @@ var UiFuncs;
             SubUI.openLiquidView(RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + ""), false) && UiFuncs.show404Anim(elem);
         },
         onLongClick: function (container, tile, elem) {
-            SubUI.openLiquidView(RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + ""), true) && UiFuncs.show404Anim(elem);
+            isDuringPopup(elem) || SubUI.openLiquidView(RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + ""), true) && UiFuncs.show404Anim(elem);
         }
     };
     UiFuncs.genOverlayWindow = function () {
@@ -300,14 +317,13 @@ var UiFuncs;
             drawing: [{ type: "background", color: Color.TRANSPARENT }],
             elements: {
                 popupFrame: {
-                    type: "scale",
+                    type: "image",
                     x: -1000,
                     y: -1000,
                     width: 64,
                     height: 64,
                     scale: 3,
-                    bitmap: "workbench_frame3",
-                    value: 1
+                    bitmap: "workbench_frame3"
                 },
                 popupText: {
                     type: "text",
@@ -352,14 +368,15 @@ var UiFuncs;
         var elements = elem.window.getParentWindow().getElements();
         var text = elements.get("popupText");
         var frame = elements.get("popupFrame");
-        if (str && event.type == "MOVE") {
+        var MOVEtoLONG_CLICK = event.type == "LONG_CLICK" && frame.x !== -1000 && frame.y !== -1000;
+        if (str && (event.type == "MOVE" || MOVEtoLONG_CLICK)) {
             var frameTex = UI.FrameTextureSource.get("workbench_frame3");
             var width = McFontPaint.measureText(str) + 30;
             var location = elem.window.getLocation();
             var x = location.x + location.windowToGlobal(event.x);
             var y = location.y + location.windowToGlobal(event.y);
+            frame.texture = new UI.Texture(frameTex.expandAndScale(width, 48, 3, frameTex.getCentralColor()));
             frame.setSize(width, 48);
-            frame.setBinding("texture", frameTex.expandAndScale(width, 48, 3, frameTex.getCentralColor()));
             frame.setPosition(Math_clamp(x - width / 2, 0, 1000 - width), Math.max(y - 100, 0));
             text.setPosition(Math_clamp(x, width / 2, 1000 - width / 2), Math.max(y - 100, 0) - 3);
             text.setBinding("text", str);
@@ -369,7 +386,12 @@ var UiFuncs;
             text.setPosition(-1000, -1000);
         }
     };
+    var isDuringPopup = function (elem) {
+        var frame = elem.window.getParentWindow().getElements().get("popupFrame");
+        return frame.x !== -1000 && frame.y !== -1000;
+    };
     UiFuncs.onTouchSlot = function (elem, event) {
+        //elem.isDarken = event.type != "UP";
         UiFuncs.popupTips(elem.source.id !== 0 ? ItemList.getName(elem.source.id, elem.source.data) : "", elem, event);
     };
     UiFuncs.onTouchTank = function (elem, event) {
@@ -393,10 +415,8 @@ var UiFuncs;
     };
 })(UiFuncs || (UiFuncs = {}));
 var McFontPaint = (function () {
-    var NativeAPI = ModAPI.requireGlobal("requireMethodFromNativeAPI");
-    var getMcTypeface = NativeAPI("utils.FileTools", "getMcTypeface");
     var paint = new android.graphics.Paint();
-    paint.setTypeface(getMcTypeface());
+    paint.setTypeface(WRAP_JAVA("com.zhekasmirnov.innercore.utils.FileTools").getMcTypeface());
     paint.setTextSize(24);
     return paint;
 })();
@@ -494,33 +514,37 @@ var RecipeType = /** @class */ (function () {
     };
     RecipeType.prototype.getList = function (id, data, isUsage) {
         var list = this.getAllList();
+        var callback = function (item) { return item.id === id && (data === -1 || item.data === -1 || item.data === data); };
         return isUsage ?
-            list.filter(function (recipe) { return recipe.input ? recipe.input.some(function (item) { return item.id === id && (data === -1 || item.data === data); }) : false; }) :
-            list.filter(function (recipe) { return recipe.output ? recipe.output.some(function (item) { return item.id === id && (data === -1 || item.data === data); }) : false; });
+            list.filter(function (recipe) { return recipe.input ? recipe.input.some(callback) : false; }) :
+            list.filter(function (recipe) { return recipe.output ? recipe.output.some(callback) : false; });
     };
     RecipeType.prototype.getListByLiquid = function (liquid, isUsage) {
         var list = this.getAllList();
+        var callback = function (liq) { return liq.liquid === liquid; };
         return isUsage ?
-            list.filter(function (recipe) { return recipe.inputLiq ? recipe.inputLiq.some(function (liq) { return liq.liquid === liquid; }) : false; }) :
-            list.filter(function (recipe) { return recipe.outputLiq ? recipe.outputLiq.some(function (liq) { return liq.liquid === liquid; }) : false; });
+            list.filter(function (recipe) { return recipe.inputLiq ? recipe.inputLiq.some(callback) : false; }) :
+            list.filter(function (recipe) { return recipe.outputLiq ? recipe.outputLiq.some(callback) : false; });
     };
     RecipeType.prototype.hasAnyRecipe = function (id, data, isUsage) {
         var list = this.getAllList();
         if (list.length === 0) {
             return this.getList(id, data, isUsage).length > 0;
         }
+        var callback = function (item) { return item && item.id === id && (data === -1 || item.data === -1 || item.data === data); };
         return isUsage ?
-            list.some(function (recipe) { return recipe.input ? recipe.input.some(function (item) { return item && item.id === id && (data === -1 || item.data === data); }) : false; }) :
-            list.some(function (recipe) { return recipe.output ? recipe.output.some(function (item) { return item && item.id === id && (data === -1 || item.data === data); }) : false; });
+            list.some(function (recipe) { return recipe.input ? recipe.input.some(callback) : false; }) :
+            list.some(function (recipe) { return recipe.output ? recipe.output.some(callback) : false; });
     };
     RecipeType.prototype.hasAnyRecipeByLiquid = function (liquid, isUsage) {
         var list = this.getAllList();
         if (list.length === 0) {
             return this.getListByLiquid(liquid, isUsage).length > 0;
         }
+        var callback = function (liq) { return liq && liq.liquid === liquid; };
         return isUsage ?
-            list.some(function (recipe) { return recipe.inputLiq ? recipe.inputLiq.some(function (liq) { return liq && liq.liquid === liquid; }) : false; }) :
-            list.some(function (recipe) { return recipe.outputLiq ? recipe.outputLiq.some(function (liq) { return liq && liq.liquid === liquid; }) : false; });
+            list.some(function (recipe) { return recipe.inputLiq ? recipe.inputLiq.some(callback) : false; }) :
+            list.some(function (recipe) { return recipe.outputLiq ? recipe.outputLiq.some(callback) : false; });
     };
     RecipeType.prototype.onOpen = function (elements, recipe) {
     };
@@ -605,6 +629,12 @@ var RecipeTypeRegistry = /** @class */ (function () {
     };
     RecipeTypeRegistry.openRecipePage = function (recipeKey) {
         SubUI.openListView(typeof recipeKey === "string" ? [recipeKey] : recipeKey);
+    };
+    RecipeTypeRegistry.openRecipePageByItem = function (id, data, isUsage) {
+        return SubUI.openItemView(id, data, isUsage);
+    };
+    RecipeTypeRegistry.openRecipePageByLiquid = function (liquid, isUsage) {
+        return SubUI.openLiquidView(liquid, isUsage);
     };
     RecipeTypeRegistry.getLiquidByTex = function (texture) {
         for (var key in LiquidRegistry.liquids) {
@@ -788,7 +818,7 @@ var MainUI = /** @class */ (function () {
     function MainUI() {
     }
     MainUI.calcSlotCountY = function () {
-        var slotSize = 960 / this.slotCountX;
+        var slotSize = this.INNER_WIDTH / this.slotCountX;
         var count = 0;
         while (68 + slotSize * count <= ScreenHeight - 70) {
             count++;
@@ -813,9 +843,8 @@ var MainUI = /** @class */ (function () {
         }
     };
     MainUI.refreshSlotsWindow = function () {
-        var width = 960;
-        var height = this.slotCountY * (960 / this.slotCountX);
-        var location = { x: 20, y: 68, width: width, height: height };
+        var height = this.slotCountY * (this.INNER_WIDTH / this.slotCountX);
+        var location = { x: 20, y: 68, width: this.INNER_WIDTH, height: height };
         var slotSize = 1000 / this.slotCountX;
         var elemSlot = {};
         for (var i = 0; i < this.slotCount; i++) {
@@ -837,6 +866,12 @@ var MainUI = /** @class */ (function () {
             ],
             elements: elemSlot
         });
+    };
+    MainUI.setCloseOnBackPressed = function (val) {
+        this.window.setCloseOnBackPressed(val);
+    };
+    MainUI.isOpened = function () {
+        return this.window.isOpened();
     };
     MainUI.switchWindow = function (liquidMode, force) {
         if (!force && this.liquidMode === liquidMode) {
@@ -860,12 +895,12 @@ var MainUI = /** @class */ (function () {
     };
     MainUI.updateWindow = function () {
         var elements = this.window.getElements();
+        var elem;
         var maxPage = this.liquidMode ? (this.liqList.length / this.tankCount | 0) + 1 : (this.list.length / this.slotCount | 0) + 1;
         this.page = this.page < 0 ? maxPage - 1 : this.page >= maxPage ? 0 : this.page;
         elements.get("textPage").setBinding("text", (this.page + 1) + " / " + maxPage);
         if (this.liquidMode) {
             elements = this.tanksWindow.getElements();
-            var elem = void 0;
             var liquid = void 0;
             for (var i = 0; i < this.tankCount; i++) {
                 elem = elements.get("tank" + i);
@@ -899,6 +934,7 @@ var MainUI = /** @class */ (function () {
     };
     var _a;
     _a = MainUI;
+    MainUI.INNER_WIDTH = 960;
     MainUI.page = 0;
     MainUI.list = [];
     MainUI.liquidMode = false;
@@ -930,9 +966,8 @@ var MainUI = /** @class */ (function () {
     MainUI.slotCount = _a.slotCountX * _a.slotCountY;
     MainUI.tankCount = 8;
     MainUI.tanksWindow = (function () {
-        var width = 960;
         var height = ScreenHeight - 68 - 70;
-        var location = { x: 20, y: 68, width: width, height: height };
+        var location = { x: 20, y: 68, width: _a.INNER_WIDTH, height: height };
         var drawTank = [{ type: "background", color: UI.FrameTextureSource.get("classic_frame_slot").getCentralColor() }];
         var elemTank = {};
         for (var i = 0; i < _a.tankCount; i++) {
@@ -966,7 +1001,7 @@ var MainUI = /** @class */ (function () {
     MainUI.window = (function () {
         var window = new UI.WindowGroup();
         var slotSize = 960 / _a.slotCountX;
-        window.addWindow("controller", {
+        var controller = window.addWindow("controller", {
             location: { x: 0, y: 0, width: 1000, height: ScreenHeight },
             drawing: [
                 { type: "background", color: Color.TRANSPARENT },
@@ -1043,6 +1078,7 @@ var MainUI = /** @class */ (function () {
                     } },
                 switchMode: { type: "switch", x: 93, y: ScreenHeight - 50, scale: 2, onNewState: function (state, container, elem) {
                         World.isWorldLoaded() && _a.switchWindow(!!state);
+                        //elem.texture = new UI.Texture(UI.TextureSource.get("default_switch" + (state ? "on" : "off")));
                     } },
                 buttonPrev: {
                     type: "button",
@@ -1073,9 +1109,10 @@ var MainUI = /** @class */ (function () {
         _a.refreshSlotsWindow();
         window.addWindowInstance("list", _a.slotsWindow);
         window.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
-        window.setBlockingBackground(true);
         window.setContainer(new UI.Container());
-        window.getWindow("controller").setEventListener({
+        window.setBlockingBackground(true);
+        window.setCloseOnBackPressed(true);
+        controller.setEventListener({
             onOpen: function () {
                 StartButton.close();
             },
@@ -1098,6 +1135,9 @@ var isListView = function (a) { return a && a.mode === ViewMode.LIST; };
 var SubUI = /** @class */ (function () {
     function SubUI() {
     }
+    SubUI.isOpened = function () {
+        return this.window.isOpened();
+    };
     SubUI.setupWindow = function () {
         var _this = this;
         var recipeTypeLength = RecipeTypeRegistry.getLength();
@@ -1274,7 +1314,7 @@ var SubUI = /** @class */ (function () {
     SubUI.recent = [];
     SubUI.window = (function () {
         var window = new UI.WindowGroup();
-        window.addWindow("controller", {
+        var controller = window.addWindow("controller", {
             location: { x: (1000 - ScreenHeight * 1.5) / 2, y: 0, width: ScreenHeight * 1.5, height: ScreenHeight },
             drawing: [
                 { type: "background", color: Color.TRANSPARENT },
@@ -1308,7 +1348,6 @@ var SubUI = /** @class */ (function () {
                             _a.window.close();
                         },
                         onLongClick: function () {
-                            _a.recent.length = 0;
                             _a.window.close();
                         }
                     }
@@ -1358,6 +1397,16 @@ var SubUI = /** @class */ (function () {
         window.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
         window.setContainer(new UI.Container());
         window.setBlockingBackground(true);
+        window.setCloseOnBackPressed(true);
+        controller.setEventListener({
+            onOpen: function () {
+                MainUI.isOpened() && MainUI.setCloseOnBackPressed(false);
+            },
+            onClose: function () {
+                _a.recent.length = 0;
+                MainUI.isOpened() && MainUI.setCloseOnBackPressed(true);
+            }
+        });
         return window;
     })();
     return SubUI;
@@ -1949,6 +1998,7 @@ Callback.addCallback("LevelLoaded", function () {
         var time = Debug.sysTime();
         ItemList.addModItems();
         ItemList.setup();
+        __config__.getBool("loadIcon") && ItemList.cacheIcons();
         SubUI.setupWindow();
         Game.message("Recipe Viewer is ready (" + (Debug.sysTime() - time) + " ms)");
     });

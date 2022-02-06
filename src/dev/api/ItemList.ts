@@ -1,3 +1,5 @@
+const ItemIconSource = WRAP_JAVA("com.zhekasmirnov.innercore.api.mod.ui.icon.ItemIconSource").instance;
+
 class ItemList {
 
     private static list: ItemInfo[] = [];
@@ -99,6 +101,10 @@ class ItemList {
     }
 
     static getName(id: number, data?: number): string {
+        const find = this.list.find(item => item.id === id && item.data === data);
+        if(find && find.name){
+            return find.name;
+        }
         let name = "";
         try{
             name = Item.getName(id, data === -1 ? 0 : data);
@@ -122,6 +128,12 @@ class ItemList {
         this.list = this.list.filter(item => Item.isValid(item.id, item.data)).filter(removeDuplicateFilterFunc);
         this.list.forEach(item => {
             item.name = this.getName(item.id, item.data);
+        });
+    }
+
+    static cacheIcons(): void {
+        this.list.forEach(item => {
+            ItemIconSource.getScaledIcon(item.id, item.data, 16);
         });
     }
 
