@@ -60,9 +60,11 @@ class MainUI {
     }
 
     private static changeSlotXCount(val: -1 | 1): void {
-        if(this.setSlotCount(this.slotCountX + val)){
-            this.refreshSlotsWindow();
-            this.switchWindow(false, true);
+        if(!this.liquidMode){
+            if(this.setSlotCount(this.slotCountX + val)){
+                this.refreshSlotsWindow();
+                this.switchWindow(false, true);
+            }
         }
     }
 

@@ -101,10 +101,12 @@ class ItemList {
     }
 
     static getName(id: number, data?: number): string {
+        /*
         const find = this.list.find(item => item.id === id && item.data === data);
         if(find && find.name){
             return find.name;
         }
+        */
         let name = "";
         try{
             name = Item.getName(id, data === -1 ? 0 : data);

@@ -10790,6 +10790,7 @@ declare namespace UI {
         source?: ItemInstance;
         elementRect: android.graphics.Rect;
         isTouched: boolean;
+        isReleased: () => boolean;
         isDarken: boolean;
         window: Window;
         texture: Texture;

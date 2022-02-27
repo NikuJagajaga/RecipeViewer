@@ -88,10 +88,28 @@ class SubUI {
                         onClick: () => {
                             this.turnPage(this.page - 1);
                         },
-                        onLongClick: () => {
+                        onLongClick: (container, tile, elem) => {
                             this.turnPage(0);
                         }
+                    },
+/*
+                    onTouchEvent: (elem, event) => {
+                        if(event.type == "DOWN"){
+                            Threading.initThread("rv_holdButton", () => {
+                                let time = 0;
+                                alert(elem.isReleased());
+                                while(!elem.isReleased()){
+                                    if(time > 10){
+                                        if(time % 10 === 0)this.turnPage(this.page - 1);
+                                    }
+                                    time++;
+                                    alert(time);
+                                    java.lang.Thread.sleep(50);
+                                }
+                            });
+                        }
                     }
+*/
                 },
                 buttonNext: {
                     type: "button",
@@ -335,7 +353,7 @@ class SubUI {
         }
         const recipeType = RecipeTypeRegistry.get(this.select);
         const elements = this.window.getWindow("controller").getElements();
-        this.page = page < 0 ? this.list.length : page >= this.list.length ? 0 : page;
+        this.page = page < 0 ? this.list.length - 1 : page >= this.list.length ? 0 : page;
         elements.get("scrollPage").setBinding("raw-value", java.lang.Float.valueOf(this.page / (this.list.length - 1)));
         elements.get("textPage").setBinding("text", (this.page + 1) + " / " + this.list.length);
         elements.get("textPage").setPosition(300 + (this.page < this.list.length / 2 ? 400 : 100), 590);

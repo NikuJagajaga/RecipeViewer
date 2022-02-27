@@ -6,7 +6,7 @@ class RButton {
     private static window: UI.Window = (() => {
 
         const window = new UI.Window({
-            location: {x: 1000 - 128, y: ScreenHeight - 96, width: 64, height: 64},
+            location: {x: 1000 - 200, y: ScreenHeight - 80, width: 64, height: 64},
             elements: {
                 button: {
                     type: "button",

@@ -75,18 +75,19 @@ namespace UiFuncs {
         ovl.open();
     }
 
+    const FrameTex = UI.FrameTextureSource.get("workbench_frame3");
+
     export const popupTips = (str: string, elem: UI.Element, event: {x: number, y: number, localX: number, localY: number, type: TouchEventType}): void => {
         const elements = elem.window.getParentWindow().getElements();
         const text = elements.get("popupText");
         const frame = elements.get("popupFrame");
         const MOVEtoLONG_CLICK = event.type == "LONG_CLICK" && frame.x !== -1000 && frame.y !== -1000;
         if(str && (event.type == "MOVE" || MOVEtoLONG_CLICK)){
-            const frameTex = UI.FrameTextureSource.get("workbench_frame3");
             const width = McFontPaint.measureText(str) + 30;
             const location = elem.window.getLocation();
             const x = location.x + location.windowToGlobal(event.x);
             const y = location.y + location.windowToGlobal(event.y);
-            frame.texture = new UI.Texture(frameTex.expandAndScale(width, 48, 3, frameTex.getCentralColor()));
+            frame.texture = new UI.Texture(FrameTex.expandAndScale(width, 48, 3, FrameTex.getCentralColor()));
             frame.setSize(width, 48);
             frame.setPosition(Math_clamp(x - width / 2, 0, 1000 - width), Math.max(y - 100, 0));
             text.setPosition(Math_clamp(x, width / 2, 1000 - width / 2), Math.max(y - 100, 0) - 3);

@@ -75,3 +75,4 @@ class WorkbenchRecipe extends RecipeType {
 
 
 RecipeTypeRegistry.register("workbench", new WorkbenchRecipe());
+RButton.putOnNativeGui("innercore_generic_crafting_screen", "workbench");
