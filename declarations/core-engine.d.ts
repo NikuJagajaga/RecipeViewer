@@ -9447,6 +9447,8 @@ declare namespace UI {
 	 */
      class Window implements IWindow {
 
+        layout: android.view.ViewGroup;
+
 		/**
 		 * Constructs new [[Window]] object with specified bounds
 		 * @param location object containing window's bounds. Note that the

@@ -15,12 +15,10 @@ class LikeFurnaceRecipe extends RecipeType {
         this.recipeList = [];
     }
 
-    registerRecipe(input: string, output: string): void {
-        const inputItem = BehaviorTools.convertToItem(input);
-        const outputItem = BehaviorTools.convertToItem(output);
-        inputItem && outputItem && this.recipeList.push({
-            input: [{id: inputItem.id, count: 1, data: inputItem.data}],
-            output: [{id: outputItem.id, count: 1, data: outputItem.data}]
+    registerRecipe(input: Tile, output: Tile): void {
+        this.recipeList.push({
+            input: [{id: input.id, count: 1, data: input.data}],
+            output: [{id: output.id, count: 1, data: output.data}]
         });
     }
 

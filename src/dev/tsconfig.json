@@ -13,7 +13,6 @@
 
         "header.ts",
 
-        "api/BehaviorTools.ts",
         "api/ItemList.ts",
         "api/UiFuncs.ts",
         "api/RecipeType.ts",
@@ -39,6 +38,7 @@
     "files": [
         "../../declarations/android-declarations.d.ts",
         "../../declarations/android.d.ts",
-        "../../declarations/core-engine.d.ts"
+        "../../declarations/core-engine.d.ts",
+        "../../declarations/BehaviorJsonReader.d.ts"
     ]
 }

@@ -33,6 +33,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     }
     return to.concat(ar || Array.prototype.slice.call(from));
 };
+IMPORT("BehaviorJsonReader");
 var Color = android.graphics.Color;
 var ScreenHeight = UI.getScreenHeight();
 var isLegacy = getMCPEVersion().array[1] === 11;
@@ -66,107 +67,6 @@ const SafeInsets: {left: number, right: number} = (() => {
     return {left: cutout.getSafeInsetLeft(), right: cutout.getSafeInsetRight()};
 })();
 */ 
-var BehaviorTools = /** @class */ (function () {
-    function BehaviorTools() {
-    }
-    BehaviorTools.readJson = function (path) {
-        var reader = new java.io.BufferedReader(new java.io.FileReader(path));
-        var lines = [];
-        var str;
-        var i;
-        while (str = reader.readLine()) {
-            //str.trim().startsWith("//") || lines.push(str);
-            i = str.indexOf("//");
-            lines.push(i === -1 ? str : str.slice(0, i));
-        }
-        reader.close();
-        try {
-            return JSON.parse(lines.join("\n")) || null;
-        }
-        catch (e) {
-            return null;
-        }
-    };
-    BehaviorTools.readListOfJson = function (path) {
-        var dir = new java.io.File(path);
-        var files = dir.listFiles();
-        var list = [];
-        var json;
-        for (var i = 0; i < files.length; i++) {
-            if (!files[i].isDirectory() && files[i].getName().endsWith(".json")) {
-                json = this.readJson(files[i].getAbsolutePath());
-                json && list.push(json);
-            }
-        }
-        return list;
-    };
-    BehaviorTools.getNumericID = function (key) {
-        if (!key.startsWith("minecraft:")) {
-            return 0;
-        }
-        var key2 = key.substr(10);
-        var array = key2.split("_");
-        var slice = array.slice(1);
-        var id;
-        if (array[0] === "block") {
-            id = BlockID[slice.join("_")];
-            if (id) {
-                return id;
-            }
-            var key3 = slice[0];
-            for (var i = 1; i < slice.length; i++) {
-                key3 += slice[i].charAt(0).toUpperCase() + slice[i].slice(1);
-            }
-            id = BlockID[key3];
-            if (id) {
-                return id;
-            }
-        }
-        if (array[0] === "item") {
-            id = ItemID[array.slice(1).join("_")];
-            if (id) {
-                return id;
-            }
-            var key3 = slice[0];
-            for (var i = 1; i < slice.length; i++) {
-                key3 += slice[i].charAt(0).toUpperCase() + slice[i].slice(1);
-            }
-            id = ItemID[key3];
-            if (id) {
-                return id;
-            }
-        }
-        return VanillaBlockID[key2] || VanillaItemID[key2] || 0;
-    };
-    BehaviorTools.convertToItem = function (str) {
-        var split = str.split(":");
-        if (split.length >= 2 && split[0] === "minecraft") {
-            var key = split[1].toLowerCase();
-            var id = VanillaBlockID[key] || VanillaItemID[key];
-            if (id) {
-                return { id: id, data: +split[2] || -1 };
-            }
-        }
-        return null;
-    };
-    BehaviorTools.convertToItemForPotion = function (str) {
-        var suffix = "minecraft:potion_type:";
-        if (str.startsWith(suffix)) {
-        }
-        var split = str.split(":");
-        if (split.length >= 2 && split[0] === "minecraft") {
-            var key = split[1].toLowerCase();
-            var id = VanillaBlockID[key] || VanillaItemID[key];
-            var data = this.potionMeta[split[2]];
-            if (id) {
-                return { id: id, data: +split[2] || -1 };
-            }
-        }
-        return null;
-    };
-    BehaviorTools.potionMeta = {};
-    return BehaviorTools;
-}());
 var ItemIconSource = WRAP_JAVA("com.zhekasmirnov.innercore.api.mod.ui.icon.ItemIconSource").instance;
 var ItemList = /** @class */ (function () {
     function ItemList() {
@@ -1624,11 +1524,9 @@ var LikeFurnaceRecipe = /** @class */ (function (_super) {
         return _this;
     }
     LikeFurnaceRecipe.prototype.registerRecipe = function (input, output) {
-        var inputItem = BehaviorTools.convertToItem(input);
-        var outputItem = BehaviorTools.convertToItem(output);
-        inputItem && outputItem && this.recipeList.push({
-            input: [{ id: inputItem.id, count: 1, data: inputItem.data }],
-            output: [{ id: outputItem.id, count: 1, data: outputItem.data }]
+        this.recipeList.push({
+            input: [{ id: input.id, count: 1, data: input.data }],
+            output: [{ id: output.id, count: 1, data: output.data }]
         });
     };
     LikeFurnaceRecipe.prototype.getAllList = function () {
@@ -1647,9 +1545,8 @@ RButton.putOnNativeGui("smoker_screen", ["smoker", "fuel"]);
 var BrewingRecipe = /** @class */ (function (_super) {
     __extends(BrewingRecipe, _super);
     function BrewingRecipe() {
-        var _this = this;
         var font = { size: 30, color: Color.WHITE, shadow: 0.5, align: UI.Font.ALIGN_CENTER };
-        _this = _super.call(this, "Potion Brewing", VanillaBlockID.brewing_stand, {
+        return _super.call(this, "Potion Brewing", VanillaBlockID.brewing_stand, {
             params: { slot: "classic_slot" },
             drawing: [
                 { type: "bitmap", x: 68, y: 60, scale: 4, bitmap: "rv.brewing_stand_back" },
@@ -1663,28 +1560,29 @@ var BrewingRecipe = /** @class */ (function (_super) {
                 output0: { x: 628, y: 276, size: 128 }
             }
         }) || this;
-        return _this;
     }
-    BrewingRecipe.registerRecipe = function (input, reagent, output) {
-        var inputItem = BehaviorTools.convertToItem(input);
-        var reagentItem = BehaviorTools.convertToItem(reagent);
-        var outputItem = BehaviorTools.convertToItem(output);
-        inputItem && reagentItem && outputItem && this.recipeList.push({
-            input: [
-                { id: VanillaItemID.blaze_powder, count: 1, data: 0 },
-                { id: reagentItem.id, count: 1, data: reagentItem.data },
-                { id: inputItem.id, count: 1, data: inputItem.data },
-            ],
-            output: [
-                { id: outputItem.id, count: 1, data: outputItem.data }
-            ]
-        });
-    };
     BrewingRecipe.prototype.getAllList = function () {
         return BrewingRecipe.recipeListOld;
         //return isLegacy ? BrewingRecipe.recipeListOld : BrewingRecipe.recipeList;
     };
     BrewingRecipe.recipeList = [];
+    /*
+        static registerRecipe(input: string, reagent: string, output: string): void {
+            const inputItem = BehaviorTools.convertToItem(input);
+            const reagentItem = BehaviorTools.convertToItem(reagent);
+            const outputItem = BehaviorTools.convertToItem(output);
+            inputItem && reagentItem && outputItem && this.recipeList.push({
+                input: [
+                    {id: VanillaItemID.blaze_powder, count: 1, data: 0},
+                    {id: reagentItem.id, count: 1, data: reagentItem.data},
+                    {id: inputItem.id, count: 1, data: inputItem.data},
+                ],
+                output: [
+                    {id: outputItem.id, count: 1, data: outputItem.data}
+                ]
+            });
+        }
+    */
     BrewingRecipe.recipeListOld = (function () {
         var recipes = [];
         var id = {
@@ -1806,21 +1704,11 @@ var StonecutterRecipe = /** @class */ (function (_super) {
         }) || this;
     }
     StonecutterRecipe.registerRecipe = function (input, output) {
-        var inputItem = {
-            id: BehaviorTools.getNumericID(input.item),
-            count: input.count || 1,
-            data: input.data || 0
-        };
-        var outputItem = {
-            id: BehaviorTools.getNumericID(output.item),
-            count: output.count || 1,
-            data: output.data || 0
-        };
         var find = this.recipeList.find(function (recipe) {
             var item = recipe.input[0];
-            return item.id === inputItem.id && item.count === inputItem.count && item.data === inputItem.data;
+            return item.id === input.id && item.count === input.count && item.data === input.data;
         });
-        find ? find.output.push(outputItem) : this.recipeList.push({ input: [inputItem], output: [outputItem] });
+        find ? find.output.push(output) : this.recipeList.push({ input: [input], output: [output] });
     };
     StonecutterRecipe.prototype.getAllList = function () {
         return StonecutterRecipe.recipeList;
@@ -1867,7 +1755,7 @@ var TradingRecipe = /** @class */ (function (_super) {
         var _this = this;
         FileTools.GetListOfFiles(__packdir__ + "assets/behavior_packs/vanilla/trading/", ".json").forEach(function (file) {
             try {
-                var json = BehaviorTools.readJson(file.getAbsolutePath());
+                var json = BehaviorJsonReader.readJson(file.getAbsolutePath());
                 var jobName = _this.convertToJobName(file.getName());
                 var i = void 0;
                 var j = void 0;
@@ -1880,16 +1768,16 @@ var TradingRecipe = /** @class */ (function (_super) {
                 for (i = 0; i < json.tiers.length; i++) {
                     for (j = 0; j < json.tiers[i].trades.length; j++) {
                         trade = json.tiers[i].trades[j];
-                        input = BehaviorTools.convertToItem(trade.wants[0].item);
+                        input = BehaviorJsonReader.convertToItem(trade.wants[0].item);
                         amount = trade.wants[0].quantity;
                         if (trade.wants[1]) {
-                            input2 = BehaviorTools.convertToItem(trade.wants[1].item);
+                            input2 = BehaviorJsonReader.convertToItem(trade.wants[1].item);
                             amount2 = trade.wants[1].quantity;
                         }
                         else {
                             input2 = amount2 = null;
                         }
-                        output = BehaviorTools.convertToItem(trade.gives[0].item);
+                        output = BehaviorJsonReader.convertToItem(trade.gives[0].item);
                         input && output && _this.allTrade.push({
                             input: [
                                 { id: input.id, count: amount && typeof amount === "number" ? amount : 1, data: input.data },
@@ -1959,47 +1847,59 @@ Callback.addCallback("PostLoaded", function () {
     var y = __config__.getNumber("ButtonPosition.y").intValue();
     StartButton.getLocation().set(x < 0 ? 1000 - (-x) : x, y < 0 ? ScreenHeight - (-y) : y, 64, 64);
     Threading.initThread("rv_readJson", function () {
-        var time = Debug.sysTime();
-        alert("[RV]: Start loading vanilla recipe Json");
+        //const time = Debug.sysTime();
+        //alert("[RV]: Start loading vanilla recipe Json");
         ItemList.addVanillaItems();
         TradingRecipe.setup();
         if (isLegacy) {
-            BehaviorTools.readListOfJson(__packdir__ + "assets/definitions/recipe/").forEach(function (json) {
+            BehaviorJsonReader.readListOfJson(__packdir__ + "assets/definitions/recipe/").forEach(function (json) {
                 if (json.type === "furnace_recipe") {
-                    for (var i = 0; i < json.tags.length; i++) {
-                        switch (json.tags[i]) {
-                            case "blast_furnace":
-                                BlastFurnaceRecipe.registerRecipe(json.input, json.output);
-                                break;
-                            case "smoker":
-                                SmokerRecipe.registerRecipe(json.input, json.output);
-                                break;
-                            case "campfire":
-                                CampfireRecipe.registerRecipe(json.input, json.output);
-                                break;
+                    var furnaceIn = BehaviorJsonReader.convertToItem(json.input);
+                    var furnaceOut = BehaviorJsonReader.convertToItem(json.output);
+                    if (furnaceIn && furnaceOut) {
+                        for (var i = 0; i < json.tags.length; i++) {
+                            switch (json.tags[i]) {
+                                case "blast_furnace":
+                                    BlastFurnaceRecipe.registerRecipe(furnaceIn, furnaceOut);
+                                    break;
+                                case "smoker":
+                                    SmokerRecipe.registerRecipe(furnaceIn, furnaceOut);
+                                    break;
+                                case "campfire":
+                                    CampfireRecipe.registerRecipe(furnaceIn, furnaceOut);
+                                    break;
+                            }
                         }
                     }
                 }
                 else if (json.type === "crafting_shapeless") {
-                    json.tags.some(function (tag) { return tag === "stonecutter"; }) && StonecutterRecipe.registerRecipe(json.ingredients[0], json.result);
+                    if (json.tags.some(function (tag) { return tag === "stonecutter"; })) {
+                        var stonecutterIn = { id: BehaviorJsonReader.getNumericID(json.ingredients[0].item), count: json.ingredients[0].count || 1, data: json.ingredients[0].data || 0 };
+                        var stonecutterOut = { id: BehaviorJsonReader.getNumericID(json.result.item), count: json.result.count || 1, data: json.result.data || 0 };
+                        StonecutterRecipe.registerRecipe(stonecutterIn, stonecutterOut);
+                    }
                 }
             });
         }
         else {
-            BehaviorTools.readListOfJson(__packdir__ + "assets/behavior_packs/vanilla/recipes/").forEach(function (json) {
+            BehaviorJsonReader.readListOfJson(__packdir__ + "assets/behavior_packs/vanilla/recipes/").forEach(function (json) {
                 if (json["minecraft:recipe_furnace"]) {
                     var recipe = json["minecraft:recipe_furnace"];
-                    for (var i = 0; i < recipe.tags.length; i++) {
-                        switch (recipe.tags[i]) {
-                            case "blast_furnace":
-                                BlastFurnaceRecipe.registerRecipe(recipe.input, recipe.output);
-                                break;
-                            case "smoker":
-                                SmokerRecipe.registerRecipe(recipe.input, recipe.output);
-                                break;
-                            case "campfire":
-                                CampfireRecipe.registerRecipe(recipe.input, recipe.output);
-                                break;
+                    var furnaceIn = BehaviorJsonReader.convertToItem(recipe.input);
+                    var furnaceOut = BehaviorJsonReader.convertToItem(recipe.output);
+                    if (furnaceIn && furnaceOut) {
+                        for (var i = 0; i < recipe.tags.length; i++) {
+                            switch (recipe.tags[i]) {
+                                case "blast_furnace":
+                                    BlastFurnaceRecipe.registerRecipe(furnaceIn, furnaceOut);
+                                    break;
+                                case "smoker":
+                                    SmokerRecipe.registerRecipe(furnaceIn, furnaceOut);
+                                    break;
+                                case "campfire":
+                                    CampfireRecipe.registerRecipe(furnaceIn, furnaceOut);
+                                    break;
+                            }
                         }
                     }
                 }
@@ -2011,11 +1911,13 @@ Callback.addCallback("PostLoaded", function () {
                 */
                 else if (json["minecraft:recipe_shapeless"]) {
                     var recipe = json["minecraft:recipe_shapeless"];
-                    recipe.tags.some(function (tag) { return tag === "stonecutter"; }) && StonecutterRecipe.registerRecipe(recipe.ingredients[0], recipe.result);
+                    var stonecutterIn = { id: BehaviorJsonReader.getNumericID(recipe.ingredients[0].item), count: recipe.ingredients[0].count || 1, data: recipe.ingredients[0].data || 0 };
+                    var stonecutterOut = { id: BehaviorJsonReader.getNumericID(recipe.result.item), count: recipe.result.count || 1, data: recipe.result.data || 0 };
+                    recipe.tags.some(function (tag) { return tag === "stonecutter"; }) && StonecutterRecipe.registerRecipe(stonecutterIn, stonecutterOut);
                 }
             });
         }
-        alert("[RV]: Finish! (".concat(Debug.sysTime() - time, " ms)"));
+        //alert(`[RV]: Finish! (${Debug.sysTime() - time} ms)`);
     });
 });
 Callback.addCallback("LevelLoaded", function () {

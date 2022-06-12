@@ -1,3 +1,6 @@
+IMPORT("BehaviorJsonReader");
+
+
 const Color = android.graphics.Color;
 const ScreenHeight = UI.getScreenHeight();
 const isLegacy = getMCPEVersion().array[1] === 11;

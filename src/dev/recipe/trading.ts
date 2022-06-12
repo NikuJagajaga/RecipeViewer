@@ -65,7 +65,7 @@ class TradingRecipe extends RecipeType {
     static setup(): void {
         FileTools.GetListOfFiles(__packdir__ + "assets/behavior_packs/vanilla/trading/", ".json").forEach(file => {
             try{
-                const json: TradingJson = BehaviorTools.readJson(file.getAbsolutePath());
+                const json: TradingJson = BehaviorJsonReader.readJson(file.getAbsolutePath());
                 const jobName = this.convertToJobName(file.getName());
                 let i: number;
                 let j: number;
@@ -78,16 +78,16 @@ class TradingRecipe extends RecipeType {
                 for(i = 0; i < json.tiers.length; i++){
                     for(j = 0; j < json.tiers[i].trades.length; j++){
                         trade = json.tiers[i].trades[j];
-                        input = BehaviorTools.convertToItem(trade.wants[0].item);
+                        input = BehaviorJsonReader.convertToItem(trade.wants[0].item);
                         amount = trade.wants[0].quantity;
                         if(trade.wants[1]){
-                            input2 = BehaviorTools.convertToItem(trade.wants[1].item);
+                            input2 = BehaviorJsonReader.convertToItem(trade.wants[1].item);
                             amount2 = trade.wants[1].quantity;
                         }
                         else{
                             input2 = amount2 = null;
                         }
-                        output = BehaviorTools.convertToItem(trade.gives[0].item);
+                        output = BehaviorJsonReader.convertToItem(trade.gives[0].item);
                         input && output && this.allTrade.push({
                             input: [
                                 {id: input.id, count: amount && typeof amount === "number" ? amount : 1, data: input.data},

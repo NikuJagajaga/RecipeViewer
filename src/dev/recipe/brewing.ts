@@ -1,7 +1,7 @@
 class BrewingRecipe extends RecipeType {
 
     private static recipeList: RecipePattern[] = [];
-
+/*
     static registerRecipe(input: string, reagent: string, output: string): void {
         const inputItem = BehaviorTools.convertToItem(input);
         const reagentItem = BehaviorTools.convertToItem(reagent);
@@ -17,7 +17,7 @@ class BrewingRecipe extends RecipeType {
             ]
         });
     }
-
+*/
     private static recipeListOld: RecipePattern[] = (() => {
 
         const recipes: RecipePattern[] = [];

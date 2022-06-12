@@ -2,22 +2,12 @@ class StonecutterRecipe extends RecipeType {
 
     private static recipeList: RecipePattern[] = [];
 
-    static registerRecipe(input: {item: string, count?: number, data?: number}, output: {item: string, count?: number, data?: number}): void {
-        const inputItem = {
-            id: BehaviorTools.getNumericID(input.item),
-            count: input.count || 1,
-            data: input.data || 0
-        };
-        const outputItem = {
-            id: BehaviorTools.getNumericID(output.item),
-            count: output.count || 1,
-            data: output.data || 0
-        };
+    static registerRecipe(input: ItemInstance, output: ItemInstance): void {
         const find = this.recipeList.find(function(recipe){
             const item = recipe.input[0];
-            return item.id === inputItem.id && item.count === inputItem.count && item.data === inputItem.data;
+            return item.id === input.id && item.count === input.count && item.data === input.data;
         });
-        find ? find.output.push(outputItem) : this.recipeList.push({input: [inputItem], output: [outputItem]});
+        find ? find.output.push(output) : this.recipeList.push({input: [input], output: [output]});
     }
 
     constructor(){

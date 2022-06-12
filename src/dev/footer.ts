@@ -6,38 +6,50 @@ Callback.addCallback("PostLoaded", () => {
 
     Threading.initThread("rv_readJson", () => {
 
-        const time = Debug.sysTime();
+        //const time = Debug.sysTime();
 
-        alert("[RV]: Start loading vanilla recipe Json");
+        //alert("[RV]: Start loading vanilla recipe Json");
 
         ItemList.addVanillaItems();
         TradingRecipe.setup();
 
         if(isLegacy){
-            BehaviorTools.readListOfJson(__packdir__ + "assets/definitions/recipe/").forEach((json: RecipeJsonOld) => {
+            BehaviorJsonReader.readListOfJson(__packdir__ + "assets/definitions/recipe/").forEach((json: RecipeJsonOld) => {
                 if(json.type === "furnace_recipe"){
-                    for(let i = 0; i < json.tags.length; i++){
-                        switch(json.tags[i]){
-                            case "blast_furnace": BlastFurnaceRecipe.registerRecipe(json.input, json.output); break;
-                            case "smoker": SmokerRecipe.registerRecipe(json.input, json.output); break;
-                            case "campfire": CampfireRecipe.registerRecipe(json.input, json.output); break;
+                    let furnaceIn = BehaviorJsonReader.convertToItem(json.input);
+                    let furnaceOut = BehaviorJsonReader.convertToItem(json.output);
+                    if(furnaceIn && furnaceOut){
+                        for(let i = 0; i < json.tags.length; i++){
+                            switch(json.tags[i]){
+                                case "blast_furnace": BlastFurnaceRecipe.registerRecipe(furnaceIn, furnaceOut); break;
+                                case "smoker": SmokerRecipe.registerRecipe(furnaceIn, furnaceOut); break;
+                                case "campfire": CampfireRecipe.registerRecipe(furnaceIn, furnaceOut); break;
+                            }
                         }
                     }
                 }
                 else if(json.type === "crafting_shapeless"){
-                    json.tags.some(tag => tag === "stonecutter") && StonecutterRecipe.registerRecipe(json.ingredients[0], json.result);
+                    if(json.tags.some(tag => tag === "stonecutter")){
+                        let stonecutterIn: ItemInstance = {id: BehaviorJsonReader.getNumericID(json.ingredients[0].item), count: json.ingredients[0].count || 1, data: json.ingredients[0].data || 0};
+                        let stonecutterOut: ItemInstance = {id: BehaviorJsonReader.getNumericID(json.result.item), count: json.result.count || 1, data: json.result.data || 0};
+                        StonecutterRecipe.registerRecipe(stonecutterIn, stonecutterOut);
+                    }
                 }
             });
         }
         else{
-            BehaviorTools.readListOfJson(__packdir__ + "assets/behavior_packs/vanilla/recipes/").forEach((json: RecipeJson) => {
+            BehaviorJsonReader.readListOfJson(__packdir__ + "assets/behavior_packs/vanilla/recipes/").forEach((json: RecipeJson) => {
                 if(json["minecraft:recipe_furnace"]){
                     const recipe = json["minecraft:recipe_furnace"];
-                    for(let i = 0; i < recipe.tags.length; i++){
-                        switch(recipe.tags[i]){
-                            case "blast_furnace": BlastFurnaceRecipe.registerRecipe(recipe.input, recipe.output); break;
-                            case "smoker": SmokerRecipe.registerRecipe(recipe.input, recipe.output); break;
-                            case "campfire": CampfireRecipe.registerRecipe(recipe.input, recipe.output); break;
+                    let furnaceIn = BehaviorJsonReader.convertToItem(recipe.input);
+                    let furnaceOut = BehaviorJsonReader.convertToItem(recipe.output);
+                    if(furnaceIn && furnaceOut){
+                        for(let i = 0; i < recipe.tags.length; i++){
+                            switch(recipe.tags[i]){
+                                case "blast_furnace": BlastFurnaceRecipe.registerRecipe(furnaceIn, furnaceOut); break;
+                                case "smoker": SmokerRecipe.registerRecipe(furnaceIn, furnaceOut); break;
+                                case "campfire": CampfireRecipe.registerRecipe(furnaceIn, furnaceOut); break;
+                            }
                         }
                     }
                 }
@@ -49,12 +61,14 @@ Callback.addCallback("PostLoaded", () => {
                 */
                 else if(json["minecraft:recipe_shapeless"]){
                     const recipe = json["minecraft:recipe_shapeless"];
-                    recipe.tags.some(tag => tag === "stonecutter") && StonecutterRecipe.registerRecipe(recipe.ingredients[0], recipe.result);
+                    let stonecutterIn: ItemInstance = {id: BehaviorJsonReader.getNumericID(recipe.ingredients[0].item), count: recipe.ingredients[0].count || 1, data: recipe.ingredients[0].data || 0};
+                    let stonecutterOut: ItemInstance = {id: BehaviorJsonReader.getNumericID(recipe.result.item), count: recipe.result.count || 1, data: recipe.result.data || 0};
+                    recipe.tags.some(tag => tag === "stonecutter") && StonecutterRecipe.registerRecipe(stonecutterIn, stonecutterOut);
                 }
             });
         }
 
-        alert(`[RV]: Finish! (${Debug.sysTime() - time} ms)`);
+        //alert(`[RV]: Finish! (${Debug.sysTime() - time} ms)`);
 
     });
 
