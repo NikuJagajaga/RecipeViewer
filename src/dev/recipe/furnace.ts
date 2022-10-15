@@ -1,15 +1,17 @@
 class FurnaceRecipe extends RecipeType {
 
     constructor(){
+        const top = 40;
         super("Smelting", VanillaBlockID.furnace, {
             drawing: [
-                {type: "bitmap", x: 440, y: 185, scale: 2, bitmap: "_workbench_bar"}
+                {type: "bitmap", x: 500 - 66, y: 15 + top, scale: 6, bitmap: "rv.arrow_right"}
             ],
             elements: {
-                input0: {x: 280, y: 190, size: 120},
-                output0: {x: 600, y: 190, size: 120}
+                input0: {x: 500 - 66 - 180, y: top, size: 120},
+                output0: {x: 500 + 66 + 60, y: top, size: 120}
             }
         });
+        this.setGridView(3, 1, true);
     }
 
     getAllList(): RecipePattern[] {
@@ -35,18 +37,22 @@ class FurnaceFuelRecipe extends RecipeType {
     constructor(){
         super("Furnace Fuel", VanillaBlockID.furnace, {
             drawing: [
-                {type: "bitmap", x: 290, y: 140, scale: 8, bitmap: "rv.furnace_burn"}
+                {type: "bitmap", x: 500 - 104, y: 300 - 240, scale: 16, bitmap: "rv.furnace_burn"}
             ],
             elements: {
-                input0: {x: 280, y: 260, size: 120},
-                text: {type: "text", x: 450, y: 220, multiline: true, font: {size: 40, color: Color.WHITE, shadow: 0.5}}
+                input0: {x: 500 - 120, y: 300, size: 240},
+                text: {type: "text", x: 500, y: 600, multiline: true, font: {size: 80, color: Color.WHITE, shadow: 0.5, align: UI.Font.ALIGN_CENTER}}
             }
         });
+        this.setGridView(2, 3, true);
         this.setDescription("Fuel");
     }
 
     getAllList(): RecipePattern[] {
-        return ItemList.get().filter(item => Recipes.getFuelBurnDuration(item.id, item.data) > 0).map(item => ({input: [{id: item.id, count: 1, data: item.data}]}));
+        return ItemList.get()
+            .filter(item => Recipes.getFuelBurnDuration(item.id, item.data) > 0)
+            .sort((a, b) => Recipes.getFuelBurnDuration(b.id, b.data) - Recipes.getFuelBurnDuration(a.id, a.data))
+            .map(item => ({input: [{id: item.id, count: 1, data: item.data}]}));
     }
 
     getList(id: number, data: number, isUsage: boolean): RecipePattern[] {
@@ -60,7 +66,3 @@ class FurnaceFuelRecipe extends RecipeType {
     }
 
 }
-
-RecipeTypeRegistry.register("furnace", new FurnaceRecipe());
-RecipeTypeRegistry.register("fuel", new FurnaceFuelRecipe());
-RButton.putOnNativeGui("furnace_screen", ["furnace", "fuel"]);

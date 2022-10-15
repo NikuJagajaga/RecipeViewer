@@ -1,18 +1,20 @@
 class LiquidFillingRecipe extends RecipeType {
 
     constructor(){
+        const top = 50;
+        const size = 300;
         super("Liquid Filling", VanillaItemID.bucket, {
             drawing: [
-                {type: "frame", x: 450, y: 50, width: 100, height: 400, scale: 4, bitmap: "default_container_frame"},
-                {type: "bitmap", x: 330 + 28, y: 190 + 28, scale: 1, bitmap: "_workbench_bar"},
-                {type: "bitmap", x: 550 + 28, y: 190 + 28, scale: 1, bitmap: "_workbench_bar"}
+                {type: "frame", x: 500 - size / 2, y: size * 2 + top, width: size, height: size, scale: 12, bitmap: "default_container_frame"},
+                {type: "bitmap", x: 500 - 90, y: size + 18 + top, scale: 12, bitmap: "rv.arrow_down"}
             ],
             elements: {
-                input0: {x: 210, y: 190, size: 120},
-                output0: {x: 670, y: 190, size: 120},
-                inputLiq0: {x: 450 + 4, y: 50 + 4, width: 100 - 8, height: 400 - 8}
+                input0: {x: 500 - size / 2, y: top, size: size},
+                output0: {x: 500 - size / 2, y: size * 3.75 + top, size: size},
+                inputLiq0: {x: 500 - size / 2 + 12, y: size * 2 + 12 + top, width: size - 24, height: size - 24}
             }
         });
+        this.setGridView(1, 3, true);
         this.setTankLimit(1000);
     }
 
@@ -33,6 +35,3 @@ class LiquidFillingRecipe extends RecipeType {
     }
 
 }
-
-
-RecipeTypeRegistry.register("liquid_filling", new LiquidFillingRecipe());

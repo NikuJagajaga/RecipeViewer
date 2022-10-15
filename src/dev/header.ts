@@ -19,17 +19,34 @@ interface LiquidInstance {
     amount: number;
 }
 
+interface ItemInstanceWithTips extends ItemInstance {
+    tips?: {[key: string]: any};
+}
+
+interface LiquidInstanceWithTips extends LiquidInstance {
+    tips?: {[key: string]: any};
+}
+
 interface RecipePattern {
-    input?: ItemInstance[];
-    output?: ItemInstance[];
-    inputLiq?: LiquidInstance[];
-    outputLiq?: LiquidInstance[];
+    input?: ItemInstanceWithTips[];
+    output?: ItemInstanceWithTips[];
+    inputLiq?: LiquidInstanceWithTips[];
+    outputLiq?: LiquidInstanceWithTips[];
     [key: string]: any;
 }
 
 
 const Math_clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
 const removeDuplicateFilterFunc = (item1: ItemInfo, index: number, array: ItemInfo[]) => array.findIndex(item2 => item1.id === item2.id && item1.data === item2.data && item1.type === item2.type) === index;
+
+const unifyMinMax = (val: number | MinMax): MinMax => {
+    if(typeof val === "object"){
+        return {min: val.min | 0, max: val.max | 0};
+    }
+    return {min: val | 0, max: val | 0};
+};
+
+const MinMaxtoString = (mm: MinMax): string => mm.min === mm.max ? mm.min + "" : mm.min + "-" + mm.max;
 
 const isBlockID = (id: number): boolean => {
     const info = IDRegistry.getIdInfo(id);
@@ -40,6 +57,8 @@ const isItemID = (id: number): boolean => {
     const info = IDRegistry.getIdInfo(id);
     return info && info.startsWith("item");
 };
+
+let getNumericID: (key: any_string) => number  =  (key: string) => BehaviorJsonReader.getNumericID(String(key));
 
 
 const Context = UI.getContext();
@@ -56,10 +75,12 @@ const runOnUiThread = (func: () => void) => {
     }));
 }
 
-/*
-const SafeInsets: {left: number, right: number} = (() => {
-    //@ts-ignore
-    const cutout: android.view.DisplayCutout = Context.getWindowManager().getCurrentWindowMetrics().getWindowInsets().getDisplayCutout();
-    return {left: cutout.getSafeInsetLeft(), right: cutout.getSafeInsetRight()};
-})();
-*/
+
+const joinThread = (threadName: string, startMsg?: string, doneMsg?: string): void => {
+    const thread = Threading.getThread(threadName);
+    if(thread){
+        startMsg && alert(startMsg);
+        thread.join();
+        doneMsg && alert(doneMsg);
+    }
+}

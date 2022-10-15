@@ -3,15 +3,17 @@ class LikeFurnaceRecipe extends RecipeType {
     private recipeList: RecipePattern[];
 
     constructor(name: string, icon: Tile | number){
+        const top = 40;
         super(name, icon, {
             drawing: [
-                {type: "bitmap", x: 440, y: 185, scale: 2, bitmap: "_workbench_bar"}
+                {type: "bitmap", x: 500 - 66, y: 15 + top, scale: 6, bitmap: "rv.arrow_right"}
             ],
             elements: {
-                input0: {x: 280, y: 190, size: 120},
-                output0: {x: 600, y: 190, size: 120}
+                input0: {x: 500 - 66 - 180, y: top, size: 120},
+                output0: {x: 500 + 66 + 60, y: top, size: 120}
             }
         });
+        this.setGridView(3, 1, true);
         this.recipeList = [];
     }
 
@@ -32,10 +34,3 @@ class LikeFurnaceRecipe extends RecipeType {
 const BlastFurnaceRecipe = new LikeFurnaceRecipe("Blast Furnece", VanillaBlockID.blast_furnace);
 const SmokerRecipe = new LikeFurnaceRecipe("Smoker", VanillaBlockID.smoker);
 const CampfireRecipe = new LikeFurnaceRecipe("Campfire", VanillaBlockID.campfire);
-
-RecipeTypeRegistry.register("blast_furnace", BlastFurnaceRecipe);
-RecipeTypeRegistry.register("smoker", SmokerRecipe);
-RecipeTypeRegistry.register("campfire", CampfireRecipe);
-
-RButton.putOnNativeGui("blast_furnace_screen", ["blast_furnace", "fuel"]);
-RButton.putOnNativeGui("smoker_screen", ["smoker", "fuel"]);

@@ -134,6 +134,7 @@ declare namespace Block {
 	 * was registered correctly, false otherwise
 	 */
 	function registerDropFunction(nameID: string | number, dropFunc: DropFunction, level?: number): boolean;
+    function getDropFunction(numericID: number): DropFunction;
 
 	/**
 	 * Same as [[Block.registerPopResourcesFunction]] but accepts only numeric
@@ -8300,6 +8301,8 @@ declare class SyncedNetworkData {
  * time-consuming tasks without blocking current execution thread
  */
 declare namespace Threading {
+
+    var threads: {[key: string]: java.lang.Thread};
     /**
      * Function used to format error messages in a custom way
      */
@@ -9447,7 +9450,10 @@ declare namespace UI {
 	 */
      class Window implements IWindow {
 
+        equals: (val: any) => boolean;
+
         layout: android.view.ViewGroup;
+        getContentProvider: () => any;
 
 		/**
 		 * Constructs new [[Window]] object with specified bounds
@@ -10786,6 +10792,7 @@ declare namespace UI {
 	}
 
 	interface Element {
+        equals: (value: any) => boolean;
         x: number;
         y: number;
         z: number;
@@ -11112,6 +11119,8 @@ declare namespace UI {
         x2?: number;
         y1?: number;
         y2?: number;
+
+        width?: number;
 
 		/**
 		 * Scale of a [[UIElement]]

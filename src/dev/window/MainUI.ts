@@ -55,7 +55,7 @@ class MainUI {
         this.slotCountX = x2;
         this.slotCountY = this.calcSlotCountY();
         this.slotCount = this.slotCountX * this.slotCountY;
-        __config__.getValue("slotCountX").set(x2);
+        Cfg.set("slotCountX", x2);
         return true;
     }
 
@@ -250,7 +250,7 @@ class MainUI {
             }
         });
 
-        this.setSlotCount(__config__.getNumber("slotCountX").intValue());
+        this.setSlotCount(Cfg.slotCountX);
         this.refreshSlotsWindow();
         window.addWindowInstance("list", this.slotsWindow);
         window.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
@@ -303,43 +303,58 @@ class MainUI {
     }
 
 
+    private static whileDisplaying = false;
+
     static updateWindow(): void {
 
-        let elements = this.window.getElements();
-        let elem: UI.Element;
-        const maxPage = this.liquidMode ? (this.liqList.length / this.tankCount | 0) + 1 : (this.list.length / this.slotCount | 0) + 1;
+        const threadName = "rv_MainUI_updateWindow";
+
+        this.whileDisplaying = false;
+        joinThread(threadName);
+
+        const maxPage = Math.ceil(this.liquidMode ? this.liqList.length / this.tankCount : this.list.length / this.slotCount);
         this.page = this.page < 0 ? maxPage - 1 : this.page >= maxPage ? 0 : this.page;
-        elements.get("textPage").setBinding("text", (this.page + 1) + " / " + maxPage);
+        this.window.getElements().get("textPage").setBinding("text", (this.page + 1) + " / " + maxPage);
 
         if(this.liquidMode){
-            elements = this.tanksWindow.getElements();
-            let liquid: string;
-            for(let i = 0; i < this.tankCount; i++){
-                elem = elements.get("tank" + i);
-                liquid = this.liqList[this.tankCount * this.page + i];
-                if(liquid){
-                    elem.setBinding("texture", LiquidRegistry.getLiquidUITexture(liquid, elem.elementRect.width(), elem.elementRect.height()));
-                    elem.setBinding("value", 1);
+            Threading.initThread(threadName, () => {
+                const elems = this.tanksWindow.getElements();
+                let elem: UI.Element;
+                let liquid: string;
+                this.whileDisplaying = true;
+                for(let i = 0; i < this.tankCount && this.whileDisplaying; i++){
+                    elem = elems.get("tank" + i);
+                    liquid = this.liqList[this.tankCount * this.page + i];
+                    if(liquid){
+                        elem.setBinding("texture", LiquidRegistry.getLiquidUITexture(liquid, elem.elementRect.width(), elem.elementRect.height()));
+                        elem.setBinding("value", 1);
+                    }
+                    else{
+                        elem.setBinding("texture", "_default_slot_empty");
+                        elem.setBinding("value", 0);
+                    }
                 }
-                else{
-                    elem.setBinding("texture", "_default_slot_empty");
-                    elem.setBinding("value", 0);
-                }
-            }
+            });
         }
         else{
-            elements = this.slotsWindow.getElements();
-            let item: ItemInfo;
-            for(let i = 0; i < this.slotCount; i++){
-                item = this.list[this.slotCount * this.page + i];
-                elements.get("slot" + i).setBinding("source", item ? {id: item.id, count: 1, data: item.data} : {id: 0, count: 0, data: 0});
-            }
+            Threading.initThread(threadName, () => {
+                const elems = this.slotsWindow.getElements();
+                const empty = {id: 0, count: 0, data: 0};
+                let item: ItemInfo;
+                this.whileDisplaying = true;
+                java.lang.Thread.sleep(20);
+                for(let i = 0; i < this.slotCount && this.whileDisplaying; i++){
+                    item = this.list[this.slotCount * this.page + i];
+                    elems.get("slot" + i).setBinding("source", item ? {id: item.id, count: 1, data: item.data} : empty);
+                }
+            });
         }
 
     }
 
 
     static openWindow(list: ItemInfo[] = ItemList.get()): void {
+        joinThread("rv_LevelLoaded", "[RV]: Waiting for preparations");
         this.list = list;
         this.liqList = Object.keys(LiquidRegistry.liquids);
         this.window.open();

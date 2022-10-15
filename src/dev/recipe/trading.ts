@@ -1,6 +1,6 @@
 interface VillagerWant {
     item: string;
-    quantity: number | {min: number, max: number};
+    quantity: number | MinMax;
 }
 
 interface VillagerGive {
@@ -8,7 +8,7 @@ interface VillagerGive {
     functions: {
         function: string;
         treasure: boolean;
-        levels: {min: number, max: number};
+        levels: MinMax;
     }[];
 }
 
@@ -57,8 +57,8 @@ class TradingRecipe extends RecipeType {
 
     onOpen(elements: java.util.HashMap<string, UI.Element>, recipe: RecipePattern): void {
         elements.get("textInfo").setBinding("text", `Level ${recipe.info.tier} - ${recipe.info.job}`);
-        elements.get("textCount0").setBinding("text", recipe.quantity[0] ? recipe.quantity[0].min + "-" + recipe.quantity[0].max : "");
-        elements.get("textCount1").setBinding("text", recipe.quantity[1] ? recipe.quantity[1].min + "-" + recipe.quantity[1].max : "");
+        elements.get("textCount0").setBinding("text", recipe.quantity[0] ? MinMaxtoString(recipe.quantity[0]) : "");
+        elements.get("textCount1").setBinding("text", recipe.quantity[1] ? MinMaxtoString(recipe.quantity[1]) : "");
         elements.get("textEnch").setBinding("text", recipe.isEnchanted ? "Enchanted" : "");
     }
 
@@ -72,8 +72,8 @@ class TradingRecipe extends RecipeType {
                 let trade: VillagerTrade;
                 let input: Tile;
                 let input2: Tile;
-                let amount: number | {min: number, max: number};
-                let amount2: number | {min: number, max: number};
+                let amount: number | MinMax;
+                let amount2: number | MinMax;
                 let output: Tile;
                 for(i = 0; i < json.tiers.length; i++){
                     for(j = 0; j < json.tiers[i].trades.length; j++){
@@ -113,7 +113,3 @@ class TradingRecipe extends RecipeType {
     }
 
 }
-
-
-RecipeTypeRegistry.register("trading", new TradingRecipe());
-RButton.putOnNativeGui("trade_screen", "trading");

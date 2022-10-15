@@ -35,7 +35,10 @@ class RButton {
     })();
 
     static putOnNativeGui(screenName: string, recipeKey: string | string[]): void {
-        this.data[screenName] = typeof recipeKey === "string" ? [recipeKey] : recipeKey;
+        const recipes = (typeof recipeKey === "string" ? [recipeKey] : recipeKey).filter(key => RecipeTypeRegistry.isExist(key));
+        if(recipes.length > 0){
+            this.data[screenName] = recipes;
+        }
     }
 
     static onNativeGuiChanged(screen: string): void {

@@ -12,6 +12,7 @@
     "include": [
 
         "header.ts",
+        "config.ts",
 
         "api/ItemList.ts",
         "api/UiFuncs.ts",
@@ -29,9 +30,13 @@
         "recipe/like_furnace.ts",
         "recipe/brewing.ts",
         "recipe/stonecutter.ts",
+        "recipe/smithing.ts",
         "recipe/trading.ts",
         "recipe/liquid_filling.ts",
+        "recipe/loot.ts",
+        "recipe/_register.ts",
 
+        "kex.ts",
         "footer.ts"
 
       ],
@@ -39,6 +44,7 @@
         "../../declarations/android-declarations.d.ts",
         "../../declarations/android.d.ts",
         "../../declarations/core-engine.d.ts",
+        "../../declarations/kex.d.ts",
         "../../declarations/BehaviorJsonReader.d.ts"
     ]
 }

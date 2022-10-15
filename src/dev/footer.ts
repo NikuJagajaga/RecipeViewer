@@ -1,19 +1,11 @@
 Callback.addCallback("PostLoaded", () => {
 
-    const x = __config__.getNumber("ButtonPosition.x").intValue();
-    const y = __config__.getNumber("ButtonPosition.y").intValue();
-    StartButton.getLocation().set(x < 0 ? 1000 - (-x): x, y < 0 ? ScreenHeight - (-y): y, 64, 64);
+    ItemList.addVanillaItems();
+    TradingRecipe.setup();
 
-    Threading.initThread("rv_readJson", () => {
+    if(isLegacy){
 
-        //const time = Debug.sysTime();
-
-        //alert("[RV]: Start loading vanilla recipe Json");
-
-        ItemList.addVanillaItems();
-        TradingRecipe.setup();
-
-        if(isLegacy){
+        Threading.initThread("rv_PostLoaded", () => {
             BehaviorJsonReader.readListOfJson(__packdir__ + "assets/definitions/recipe/").forEach((json: RecipeJsonOld) => {
                 if(json.type === "furnace_recipe"){
                     let furnaceIn = BehaviorJsonReader.convertToItem(json.input);
@@ -30,14 +22,18 @@ Callback.addCallback("PostLoaded", () => {
                 }
                 else if(json.type === "crafting_shapeless"){
                     if(json.tags.some(tag => tag === "stonecutter")){
-                        let stonecutterIn: ItemInstance = {id: BehaviorJsonReader.getNumericID(json.ingredients[0].item), count: json.ingredients[0].count || 1, data: json.ingredients[0].data || 0};
-                        let stonecutterOut: ItemInstance = {id: BehaviorJsonReader.getNumericID(json.result.item), count: json.result.count || 1, data: json.result.data || 0};
+                        let stonecutterIn: ItemInstance = {id: getNumericID(json.ingredients[0].item), count: json.ingredients[0].count || 1, data: json.ingredients[0].data || 0};
+                        let stonecutterOut: ItemInstance = {id: getNumericID(json.result.item), count: json.result.count || 1, data: json.result.data || 0};
                         StonecutterRecipe.registerRecipe(stonecutterIn, stonecutterOut);
                     }
                 }
             });
-        }
-        else{
+        });
+
+    }
+    else{
+
+        Threading.initThread("rv_PostLoaded", () => {
             BehaviorJsonReader.readListOfJson(__packdir__ + "assets/behavior_packs/vanilla/recipes/").forEach((json: RecipeJson) => {
                 if(json["minecraft:recipe_furnace"]){
                     const recipe = json["minecraft:recipe_furnace"];
@@ -61,28 +57,25 @@ Callback.addCallback("PostLoaded", () => {
                 */
                 else if(json["minecraft:recipe_shapeless"]){
                     const recipe = json["minecraft:recipe_shapeless"];
-                    let stonecutterIn: ItemInstance = {id: BehaviorJsonReader.getNumericID(recipe.ingredients[0].item), count: recipe.ingredients[0].count || 1, data: recipe.ingredients[0].data || 0};
-                    let stonecutterOut: ItemInstance = {id: BehaviorJsonReader.getNumericID(recipe.result.item), count: recipe.result.count || 1, data: recipe.result.data || 0};
+                    let stonecutterIn: ItemInstance = {id: getNumericID(recipe.ingredients[0].item), count: recipe.ingredients[0].count || 1, data: recipe.ingredients[0].data || 0};
+                    let stonecutterOut: ItemInstance = {id: getNumericID(recipe.result.item), count: recipe.result.count || 1, data: recipe.result.data || 0};
                     recipe.tags.some(tag => tag === "stonecutter") && StonecutterRecipe.registerRecipe(stonecutterIn, stonecutterOut);
                 }
             });
-        }
+        });
 
-        //alert(`[RV]: Finish! (${Debug.sysTime() - time} ms)`);
-
-    });
+    }
 
 });
 
 
 Callback.addCallback("LevelLoaded", () => {
-    Threading.initThread("rv_setup", () => {
-        const time = Debug.sysTime();
+    joinThread("rv_PostLoaded", "[RV]: Loading vanilla recipe Jsons", "[RV]: Finish!");
+    Threading.initThread("rv_LevelLoaded", () => {
         ItemList.addModItems();
         ItemList.setup();
-        __config__.getBool("loadIcon") && ItemList.cacheIcons();
+        Cfg.loadIcon && ItemList.cacheIcons();
         SubUI.setupWindow();
-        Game.message(`Recipe Viewer is ready (${Debug.sysTime() - time} ms)`);
     });
 });
 

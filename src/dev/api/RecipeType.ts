@@ -1,23 +1,18 @@
-const McFontPaint: android.graphics.Paint = (() => {
-    const paint = new android.graphics.Paint();
-    paint.setTypeface(WRAP_JAVA("com.zhekasmirnov.innercore.utils.FileTools").getMcTypeface());
-    paint.setTextSize(24);
-    return paint;
-})();
-
-
 abstract class RecipeType {
 
+    private readonly windows: UI.Window[];
     readonly window: UI.Window;
     readonly icon: ItemInstance;
     private description: string;
     private tankLimit: number;
 
-    private elems: {input: UI.Element[], output: UI.Element[], inputLiq: UI.Element[], outputLiq: UI.Element[]} = {input: [], output: [], inputLiq: [], outputLiq: []};
+    private readonly inputSlotSize: number;
+    private readonly outputSlotSize: number;
+    private readonly inputTankSize: number;
+    private readonly outputTankSize: number;
 
     constructor(private readonly name: string, icon: Tile | number, content: {params?: UI.BindingsSet, drawing?: UI.DrawingElement[], elements: {[key: string]: Partial<UI.UIElement>}}){
 
-        this.window = new UI.Window();
         this.icon = typeof icon === "number" ? {id: icon, count: 1, data: 0} : {...icon, count: 1};
 
         content.params = content.params || {};
@@ -25,8 +20,29 @@ abstract class RecipeType {
         content.drawing = content.drawing || [];
         content.drawing.some(elem => elem.type === "background") || content.drawing.unshift({type: "background", color: Color.TRANSPARENT});
 
-        const templateSlot = {type: "slot", visual: true, clicker: UiFuncs.slotClicker, onTouchEvent: UiFuncs.onTouchSlot};
-        const templateTank = {type: "scale", direction: 1, clicker: UiFuncs.tankClicker, onTouchEvent: UiFuncs.onTouchTank};
+        const that = this;
+
+        const templateSlot = {
+            type: "slot",
+            visual: true,
+            clicker: UiFuncs.slotClicker,
+            onTouchEvent: (elem: UI.Element, event: {x: number, y: number, localX: number, localY: number, type: TouchEventType}) => {
+                const name = elem.source.id !== 0 ? ItemList.getName(elem.source.id, elem.source.data) : "";
+                UiFuncs.popupTips(that.slotTooltip(name, elem.source, elem.getBinding("rv_tips")), elem, event);
+            }
+        };
+
+        const templateTank = {
+            type: "scale",
+            direction: 1,
+            clicker: UiFuncs.tankClicker,
+            onTouchEvent: (elem: UI.Element, event: {x: number, y: number, localX: number, localY: number, type: TouchEventType}) => {
+                const liquid = RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + "");
+                const amount = elem.getBinding("value") * this.tankLimit;
+                const name = LiquidRegistry.isExists(liquid) ? LiquidRegistry.getLiquidName(liquid) : "";
+                UiFuncs.popupTips(that.tankTooltip(name, {liquid: liquid, amount: amount}, elem.getBinding("rv_tips")), elem, event);
+            }
+        };
 
         let isInputSlot: boolean;
         let isOutputSlot: boolean;
@@ -53,24 +69,20 @@ abstract class RecipeType {
             }
         }
 
-        /*
-        before
-        x: 230,
-        y: 55,
-        width: 600,
-        height: 340
-        */
+        this.inputSlotSize = inputSlotSize;
+        this.outputSlotSize = outputSlotSize;
+        this.inputTankSize = inputTankSize;
+        this.outputTankSize = outputTankSize;
 
-        //same as SubUI Window "controller"
-        const location = new UI.WindowLocation({x: (1000 - ScreenHeight * 1.5) / 2, y: 0, width: ScreenHeight * 1.5, height: ScreenHeight});
+        const locCtrler = new UI.WindowLocation({x: (1000 - ScreenHeight * 1.5) / 2, y: 0, width: ScreenHeight * 1.5, height: ScreenHeight});
 
+        this.window = new UI.Window();
         this.window.setContent({
             location: {
-                x: location.x + location.windowToGlobal(120),
-                y: location.y + location.windowToGlobal(75),
-                padding: {top: location.y + location.windowToGlobal(75), bottom: location.windowToGlobal(75)},
-                width: location.windowToGlobal(860),
-                height: ScreenHeight - location.windowToGlobal(75)
+                x: locCtrler.x + locCtrler.windowToGlobal(120),
+                y: locCtrler.y + locCtrler.windowToGlobal(75),
+                width: locCtrler.windowToGlobal(860),
+                height: ScreenHeight - locCtrler.windowToGlobal(75 + 75)
             },
             params: content.params,
             drawing: content.drawing,
@@ -78,22 +90,76 @@ abstract class RecipeType {
             elements: content.elements
         });
 
-        const elements = this.window.getElements();
-        for(let i = 0; i < inputSlotSize; i++){
-            this.elems.input[i] = elements.get("input" + i);
-        }
-        for(let i = 0; i < outputSlotSize; i++){
-            this.elems.output[i] = elements.get("output" + i);
-        }
-        for(let i = 0; i < inputTankSize; i++){
-            this.elems.inputLiq[i] = elements.get("inputLiq" + i);
-        }
-        for(let i = 0; i < outputTankSize; i++){
-            this.elems.outputLiq[i] = elements.get("outputLiq" + i);
-        }
+        this.windows = [this.window];
 
     }
 
+    setGridView(row: number, col: number, border?: boolean | number/*Color*/): RecipeType {
+
+        const content = this.window.getContent();
+        const locCtrler = new UI.WindowLocation({x: (1000 - ScreenHeight * 1.5) / 2, y: 0, width: ScreenHeight * 1.5, height: ScreenHeight});
+        const x = locCtrler.x + locCtrler.windowToGlobal(120);
+        const y = locCtrler.y + locCtrler.windowToGlobal(75);
+        const w = locCtrler.windowToGlobal(860);
+        const h = (ScreenHeight - locCtrler.windowToGlobal(75 + 75));
+        let window: UI.Window;
+
+        this.windows.length = 0;
+
+        for(let c = 0; c < col; c++){
+            for(let r = 0; r < row; r++){
+                window = (c === 0 && r === 0) ? this.window : new UI.Window({...content});
+                window.getLocation().set(x + w / col * c, y + h / row * r, w / col, h / row);
+                this.windows.push(window);
+            }
+        }
+
+        for(let i = 1; i < this.windows.length; i++){
+            this.window.addAdjacentWindow(this.windows[i]);
+            this.windows[i].setParentWindow(this.window);
+        }
+
+        if(border){
+
+            const color: number = typeof border === "boolean" ? Color.rgb(80, 70, 80) : border;
+            const location = new UI.WindowLocation({x: x, y: y, width: w, height: h});
+            const lines: UI.DrawingElement[] = [];
+            let pos = 0;
+
+            for(let r = 1; r < row; r++){
+                pos = location.getWindowHeight() / row * r;
+                lines.push({type: "line", x1: 0, x2: 1000, y1: pos, y2: pos, color: color, width: 6});
+            }
+
+            for(let c = 1; c < col; c++){
+                pos = 1000 / col * c;
+                lines.push({type: "line", x1: pos, x2: pos, y1: 0, y2: location.getWindowHeight(), color: color, width: 6});
+            }
+
+            window = new UI.Window({
+                location: location.asScriptable(),
+                drawing: [
+                    {type: "background", color: Color.TRANSPARENT},
+                    ...lines
+                ],
+                elements: {}
+            });
+
+            window.setTouchable(false);
+            this.window.addAdjacentWindow(window);
+
+        }
+
+        return this;
+
+    }
+/*
+    setParentWindow(window: UI.WindowGroup): void {
+        for(let i = 0; i < this.windows.length; i++){
+            this.windows[i].setParentWindow(window);
+        }
+    }
+*/
     setDescription(text: string): RecipeType {
         this.description = text;
         return this;
@@ -118,6 +184,10 @@ abstract class RecipeType {
 
     getWindow(): UI.Window {
         return this.window;
+    }
+
+    getRecipeCountPerPage(): number {
+        return this.windows.length;
     }
 
     abstract getAllList(): RecipePattern[];
@@ -163,41 +233,83 @@ abstract class RecipeType {
     onOpen(elements: java.util.HashMap<string, UI.Element>, recipe: RecipePattern): void {
     }
 
-    showRecipe(recipe: RecipePattern): void {
-
-        this.onOpen(this.window.getElements(), recipe);
+    showRecipe(recipes: RecipePattern[]): void {
 
         const empty = {id: 0, count: 0, data: 0};
+        const recsPerPage = this.getRecipeCountPerPage();
+        let recipe: RecipePattern;
+        let elements: java.util.HashMap<string, UI.Element>
+        let elem: UI.Element;
 
-        this.elems.input.forEach((elem, i) => {
-            elem.setBinding("source", recipe.input ? (recipe.input[i] || empty) : empty);
-        });
+        for(let i = 0; i < recsPerPage; i++){
 
-        this.elems.output.forEach((elem, i) => {
-            elem.setBinding("source", recipe.output ? (recipe.output[i] || empty) : empty);
-        });
+            recipe = recipes[i] || {};
+            elements = this.windows[i].getElements();
 
-        this.elems.inputLiq.forEach((elem, i) => {
-            if(recipe.inputLiq && recipe.inputLiq[i]){
-                elem.setBinding("texture", LiquidRegistry.getLiquidUITexture(recipe.inputLiq[i].liquid, elem.elementRect.width(), elem.elementRect.height()));
-                elem.setBinding("value", recipe.inputLiq[i].amount / this.tankLimit);
+            recipes[i] && this.onOpen(elements, recipe);
+
+            for(let j = 0; j < this.inputSlotSize; j++){
+                elem = elements.get("input" + j);
+                if(recipe.input && recipe.input[j]){
+                    elem.setBinding("source", {id: recipe.input[j].id, count: recipe.input[j].count, data: recipe.input[j].data});
+                    recipe.input[j].tips && elem.setBinding("rv_tips", recipe.input[j].tips);
+                }
+                else{
+                    elem.setBinding("source", empty);
+                    elem.setBinding("rv_tips", null);
+                }
             }
-            else{
-                elem.setBinding("value", 0);
-            }
-        });
 
-        this.elems.outputLiq.forEach((elem, i) => {
-            if(recipe.outputLiq && recipe.outputLiq[i]){
-                elem.setBinding("texture", LiquidRegistry.getLiquidUITexture(recipe.outputLiq[i].liquid, elem.elementRect.width(), elem.elementRect.height()));
-                elem.setBinding("value", recipe.outputLiq[i].amount / this.tankLimit);
+            for(let j = 0; j < this.outputSlotSize; j++){
+                elem = elements.get("output" + j);
+                if(recipe.output && recipe.output[j]){
+                    elem.setBinding("source", {id: recipe.output[j].id, count: recipe.output[j].count, data: recipe.output[j].data});
+                    recipe.output[j].tips && elem.setBinding("rv_tips", recipe.output[j].tips);
+                }
+                else{
+                    elem.setBinding("source", empty);
+                    elem.setBinding("rv_tips", null);
+                }
             }
-            else{
-                elem.setBinding("texture", "_default_slot_empty");
-                elem.setBinding("value", 0);
-            }
-        });
 
+            for(let j = 0; j < this.inputTankSize; j++){
+                elem = elements.get("inputLiq" + j);
+                if(recipe.inputLiq && recipe.inputLiq[j]){
+                    elem.setBinding("texture", LiquidRegistry.getLiquidUITexture(recipe.inputLiq[j].liquid, elem.elementRect.width(), elem.elementRect.height()));
+                    elem.setBinding("value", recipe.inputLiq[j].amount / this.tankLimit);
+                    recipe.inputLiq[j].tips && elem.setBinding("rv_tips", recipe.inputLiq[j].tips);
+                }
+                else{
+                    elem.setBinding("texture", "_default_slot_empty");
+                    elem.setBinding("value", 0);
+                    elem.setBinding("rv_tips", null);
+                }
+            }
+
+            for(let j = 0; j < this.outputTankSize; j++){
+                elem = elements.get("outputLiq" + j);
+                if(recipe.outputLiq && recipe.outputLiq[j]){
+                    elem.setBinding("texture", LiquidRegistry.getLiquidUITexture(recipe.outputLiq[j].liquid, elem.elementRect.width(), elem.elementRect.height()));
+                    elem.setBinding("value", recipe.outputLiq[j].amount / this.tankLimit);
+                    recipe.outputLiq[j].tips && elem.setBinding("rv_tips", recipe.outputLiq[j].tips);
+                }
+                else{
+                    elem.setBinding("texture", "_default_slot_empty");
+                    elem.setBinding("value", 0);
+                    elem.setBinding("rv_tips", null);
+                }
+            }
+
+        }
+
+    }
+
+    slotTooltip(name: string, item: ItemInstance, tips: {[key: string]: any}): string {
+        return name;
+    }
+
+    tankTooltip(name: string, liquid: LiquidInstance, tips: {[key: string]: any}): string {
+        return name;
     }
 
 }

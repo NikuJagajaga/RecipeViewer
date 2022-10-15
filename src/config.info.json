@@ -8,12 +8,78 @@
             "name": {"en": "Load Icons on Startup"},
             "index": 1
         },
+        "ButtonPosition": {
+            "name": {"en": "Button Position"},
+            "collapsible": true,
+            "index": 2
+        },
+        "ButtonPosition.x": {
+            "name": {"en": "X"},
+            "index": 3
+        },
+        "ButtonPosition.y": {
+            "name": {"en": "Y"},
+            "index": 4
+        },
         "slotCountX": {
             "name": {"en": "Number of horizontal slots in the ItemListWindow"},
-            "index": 2,
+            "index": 5,
             "type": "SeekBar",
             "min": 8,
             "max": 24
+        },
+        "preventMistap": {
+            "name": {"en": "Prevent Mistap"},
+            "index": 6
+        },
+        "availableList": {
+            "name": {"en": "Available List of Recipes"},
+            "collapsible": true,
+            "index": 7
+        },
+        "availableList.workbench": {
+            "name": {"en": "Workbench"},
+            "index": 8
+        },
+        "availableList.furnace": {
+            "name": {"en": "Furnace"},
+            "index": 9
+        },
+        "availableList.fuel": {
+            "name": {"en": "Furnace Fuel"},
+            "index": 10
+        },
+        "availableList.blast_furnace": {
+            "name": {"en": "Blast Furnace"},
+            "index": 11
+        },
+        "availableList.smoker": {
+            "name": {"en": "Smoker"},
+            "index": 12
+        },
+        "availableList.campfire": {
+            "name": {"en": "Campfire"},
+            "index": 13
+        },
+        "availableList.brewing": {
+            "name": {"en": "Brewing"},
+            "index": 14
+        },
+        "availableList.stonecutter": {
+            "name": {"en": "Stonecutter"},
+            "index": 15
+        },
+        "availableList.smithing": {
+            "name": {"en": "Smithing"},
+            "index": 16
+        },
+        "availableList.trading": {
+            "name": {"en": "Trading"},
+            "index": 17
+        },
+        "availableList.liquid_filling": {
+            "name": {"en": "Liquid Filling"},
+            "index": 18
         }
     }
 }

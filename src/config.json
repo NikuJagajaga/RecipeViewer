@@ -1,9 +1,23 @@
 {
-  "enabled": true,
-  "loadIcon": false,
-  "ButtonPosition": {
-    "x": -160,
-    "y": -70
-  },
-  "slotCountX": 12
+    "enabled": true,
+    "loadIcon": true,
+    "ButtonPosition": {
+        "x": -160,
+        "y": -70
+    },
+    "slotCountX": 12,
+    "preventMistap": false,
+    "availableRecipes": {
+        "workbench": true,
+        "furnace": true,
+        "fuel": true,
+        "blast_furnace": true,
+        "smoker": true,
+        "campfire": true,
+        "brewing": true,
+        "stonecutter": true,
+        "smithing": true,
+        "trading": true,
+        "liquid_filling": true
+    }
 }

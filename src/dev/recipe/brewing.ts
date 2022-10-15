@@ -150,7 +150,3 @@ class BrewingRecipe extends RecipeType {
     }
 
 }
-
-
-RecipeTypeRegistry.register("brewing", new BrewingRecipe());
-RButton.putOnNativeGui("brewing_stand_screen", "brewing");

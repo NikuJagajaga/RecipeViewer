@@ -1,6 +1,7 @@
 declare namespace BehaviorJsonReader {
     function readJson(path: string): any;
     function readListOfJson(path: string): any[];
+    function forEachJson(path: string, callback: (json: any) => void, threads?: number): void;
     function getNumericID(key: string): number;
     function convertToItem(str: string): Tile;
 }

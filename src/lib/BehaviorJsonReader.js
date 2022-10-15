@@ -1,6 +1,6 @@
 LIBRARY({
     name: "BehaviorJsonReader",
-    version: 1,
+    version: 2,
     shared: true,
     api: "CoreEngine"
 });
@@ -38,24 +38,52 @@ var BehaviorJsonReader;
         }
         return null;
     };
-    BehaviorJsonReader.readListOfJson = function (path) {
+    var getAllJsonPath = function (path) {
         var dir = new java.io.File(path);
         var files = dir.listFiles();
-        var list = [];
-        var json;
+        var paths = [];
         for (var i = 0; i < files.length; i++) {
             if (!files[i].isDirectory() && files[i].getName().endsWith(".json")) {
-                json = BehaviorJsonReader.readJson(files[i].getAbsolutePath());
-                json && list.push(json);
+                paths.push(files[i].getAbsolutePath());
             }
         }
+        return paths;
+    };
+    BehaviorJsonReader.readListOfJson = function (path) {
+        var paths = getAllJsonPath(path);
+        var list = [];
+        var json;
+        for (var i = 0; i < paths.length; i++) {
+            json = BehaviorJsonReader.readJson(paths[i]);
+            json && list.push(json);
+        }
         return list;
+    };
+    BehaviorJsonReader.forEachJson = function (path, callback, threads) {
+        if (threads === void 0) { threads = 1; }
+        var paths = getAllJsonPath(path);
+        var max = Math.ceil(paths.length / threads);
+        for (var i = 0; i < threads; i++) {
+            Threading.initThread("processJson_" + i, function () {
+                var split = paths.splice(0, max);
+                var json;
+                for (var j = 0; j < split.length; j++) {
+                    json = BehaviorJsonReader.readJson(split[j]);
+                    json && callback(json);
+                }
+            });
+        }
+        var thread;
+        for (var i = 0; i < threads; i++) {
+            thread = Threading.getThread("processJson_" + i);
+            thread && thread.join();
+        }
     };
     BehaviorJsonReader.getNumericID = function (key) {
         if (!key.startsWith("minecraft:")) {
             return 0;
         }
-        var key2 = key.substr(10);
+        var key2 = key.slice(("minecraft:").length);
         var array = key2.split("_");
         var slice = array.slice(1);
         var id;

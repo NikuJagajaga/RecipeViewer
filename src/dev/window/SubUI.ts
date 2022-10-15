@@ -92,24 +92,19 @@ class SubUI {
                             this.turnPage(0);
                         }
                     },
-/*
-                    onTouchEvent: (elem, event) => {
-                        if(event.type == "DOWN"){
-                            Threading.initThread("rv_holdButton", () => {
-                                let time = 0;
-                                alert(elem.isReleased());
-                                while(!elem.isReleased()){
-                                    if(time > 10){
-                                        if(time % 10 === 0)this.turnPage(this.page - 1);
-                                    }
-                                    time++;
-                                    alert(time);
-                                    java.lang.Thread.sleep(50);
-                                }
-                            });
-                        }
+                    /*
+                    onTouchEvent(elem, event){
+                        const that = this;
+                        Threading.initThread("rv_holdButton", () => {
+                            java.lang.Thread.sleep(500);
+                            while(elem.isTouched){
+                                that.turnPage(that.page - 1);
+                                java.lang.Thread.sleep(200);
+                            }
+                            alert("Touch Finish!");
+                        });
                     }
-*/
+                    */
                 },
                 buttonNext: {
                     type: "button",
@@ -131,10 +126,12 @@ class SubUI {
                     bitmapBg: "_default_slot_empty",
                     bitmapBgHover: "_default_slot_empty",
                     onTouchEvent: (elem, event) => {
-                        const len = this.list.length - 1;
-                        const page = Math.round(event.localX * len);
+                        const recipeType = RecipeTypeRegistry.get(this.select);
+                        const recsPerPage = recipeType.getRecipeCountPerPage();
+                        const maxPage = Math.ceil(this.list.length / recsPerPage) - 1;
+                        const page = Math.round(event.localX * maxPage);
                         this.turnPage(page);
-                        event.localX = page / len;
+                        event.localX = page / maxPage;
                     }
                 },
                 textPage: {type: "text", x: 300 + 400, y: 590, font: {size: 32, align: UI.Font.ALIGN_CENTER}}
@@ -176,21 +173,15 @@ class SubUI {
                 visual: true,
                 clicker: {
                     onClick: (container, tile, elem) => {
-                        elem.source.id && this.changeWindow(elem.y / 1000 | 0);
+                        const index = parseInt(UiFuncs.getElementName(elem).slice(("icon").length));
+                        elem.source.id && this.changeWindow(index);
                     },
                     onLongClick: (container, tile, elem) => {
+                        const index = parseInt(UiFuncs.getElementName(elem).slice(("icon").length));
                         const view = this.getView();
-                        const key = view.tray[elem.y / 1000 | 0];
-                        this.openListView([key]);
+                        this.openListView([view.tray[index]]);
                     }
-                },
-                /*
-                onTouchEvent: (elem, event) => {
-                    const view = this.getView();
-                    const key = view.tray[elem.y / 1000 | 0];
-                    RecipeType.onTouch.popup(RecipeTypeRegistry.isExist(key) ? RecipeTypeRegistry.get(key).getName() : "", elem, event);
                 }
-                */
             };
             elements["description" + i] = {
                 type: "text",
@@ -226,6 +217,7 @@ class SubUI {
     }
 
     static openItemView(id: number, data: number, isUsage: boolean): boolean {
+        joinThread("rv_LevelLoaded", "[RV]: Waiting for preparations");
         const currentView = this.getView();
         if(id === 0 || isItemView(currentView) && currentView.id === id && currentView.data === data && currentView.isUsage === isUsage){
             return false;
@@ -243,6 +235,7 @@ class SubUI {
     }
 
     static openLiquidView(liquid: string, isUsage: boolean): boolean {
+        joinThread("rv_LevelLoaded", "[RV]: Waiting for preparations");
         const currentView = this.getView();
         if(liquid === "" || isLiquidView(currentView) && currentView.liquid === liquid && currentView.isUsage === isUsage){
             return false;
@@ -260,6 +253,7 @@ class SubUI {
     }
 
     static openListView(recipes: string[]): void {
+        joinThread("rv_LevelLoaded", "[RV]: Waiting for preparations");
         const currentView = this.getView();
         const tray: string[] = recipes.filter((recipe) => RecipeTypeRegistry.isExist(recipe) && RecipeTypeRegistry.get(recipe).getAllList().length > 0);
         if(tray.length === 0 || isListView(currentView) && [...currentView.tray].sort().join(",") === [...tray].sort().join(",")){
@@ -313,7 +307,7 @@ class SubUI {
 
         }
         catch(e){
-            alert("up: " + e);
+            alert("SubUI.UpdateWindow\n" + e);
         }
 
     }
@@ -352,12 +346,14 @@ class SubUI {
             return;
         }
         const recipeType = RecipeTypeRegistry.get(this.select);
+        const recsPerPage = recipeType.getRecipeCountPerPage();
         const elements = this.window.getWindow("controller").getElements();
-        this.page = page < 0 ? this.list.length - 1 : page >= this.list.length ? 0 : page;
-        elements.get("scrollPage").setBinding("raw-value", java.lang.Float.valueOf(this.page / (this.list.length - 1)));
-        elements.get("textPage").setBinding("text", (this.page + 1) + " / " + this.list.length);
-        elements.get("textPage").setPosition(300 + (this.page < this.list.length / 2 ? 400 : 100), 590);
-        recipeType.showRecipe(this.list[this.page]);
+        const maxPage = Math.ceil(this.list.length / recsPerPage);
+        this.page = page < 0 ? maxPage - 1 : page >= maxPage ? 0 : page;
+        elements.get("scrollPage").setBinding("raw-value", java.lang.Float.valueOf(this.page / (maxPage - 1)));
+        elements.get("textPage").setBinding("text", (this.page + 1) + " / " + maxPage);
+        elements.get("textPage").setPosition(300 + (this.page < maxPage / 2 ? 400 : 100), 590);
+        recipeType.showRecipe(this.list.slice(this.page * recsPerPage, this.page * recsPerPage + recsPerPage));
     }
 
 }

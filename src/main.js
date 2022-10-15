@@ -9,6 +9,15 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -24,21 +33,19 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
-        }
-    }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
 IMPORT("BehaviorJsonReader");
 var Color = android.graphics.Color;
 var ScreenHeight = UI.getScreenHeight();
 var isLegacy = getMCPEVersion().array[1] === 11;
 var Math_clamp = function (value, min, max) { return Math.min(Math.max(value, min), max); };
 var removeDuplicateFilterFunc = function (item1, index, array) { return array.findIndex(function (item2) { return item1.id === item2.id && item1.data === item2.data && item1.type === item2.type; }) === index; };
+var unifyMinMax = function (val) {
+    if (typeof val === "object") {
+        return { min: val.min | 0, max: val.max | 0 };
+    }
+    return { min: val | 0, max: val | 0 };
+};
+var MinMaxtoString = function (mm) { return mm.min === mm.max ? mm.min + "" : mm.min + "-" + mm.max; };
 var isBlockID = function (id) {
     var info = IDRegistry.getIdInfo(id);
     return info && info.startsWith("block");
@@ -47,6 +54,7 @@ var isItemID = function (id) {
     var info = IDRegistry.getIdInfo(id);
     return info && info.startsWith("item");
 };
+var getNumericID = function (key) { return BehaviorJsonReader.getNumericID(String(key)); };
 var Context = UI.getContext();
 var runOnUiThread = function (func) {
     Context.runOnUiThread(new java.lang.Runnable({
@@ -60,13 +68,35 @@ var runOnUiThread = function (func) {
         }
     }));
 };
-/*
-const SafeInsets: {left: number, right: number} = (() => {
-    //@ts-ignore
-    const cutout: android.view.DisplayCutout = Context.getWindowManager().getCurrentWindowMetrics().getWindowInsets().getDisplayCutout();
-    return {left: cutout.getSafeInsetLeft(), right: cutout.getSafeInsetRight()};
-})();
-*/ 
+var joinThread = function (threadName, startMsg, doneMsg) {
+    var thread = Threading.getThread(threadName);
+    if (thread) {
+        startMsg && alert(startMsg);
+        thread.join();
+        doneMsg && alert(doneMsg);
+    }
+};
+var Cfg = {
+    set: function (name, value) {
+        __config__.getValue(name).set(value);
+    },
+    loadIcon: __config__.getBool("loadIcon"),
+    buttonX: __config__.getNumber("ButtonPosition.x").intValue(),
+    buttonY: __config__.getNumber("ButtonPosition.y").intValue(),
+    slotCountX: __config__.getNumber("slotCountX").intValue(),
+    preventMistap: __config__.getBool("preventMistap"),
+    $workbench: __config__.getBool("availableRecipes.workbench"),
+    $furnace: __config__.getBool("availableRecipes.furnace"),
+    $fuel: __config__.getBool("availableRecipes.fuel"),
+    $blast_furnace: __config__.getBool("availableRecipes.blast_furnace"),
+    $smoker: __config__.getBool("availableRecipes.smoker"),
+    $campfire: __config__.getBool("availableRecipes.campfire"),
+    $brewing: __config__.getBool("availableRecipes.brewing"),
+    $stonecutter: __config__.getBool("availableRecipes.stonecutter"),
+    $smithing: __config__.getBool("availableRecipes.smithing"),
+    $trading: __config__.getBool("availableRecipes.trading"),
+    $liquid_filling: __config__.getBool("availableRecipes.liquid_filling")
+};
 var ItemIconSource = WRAP_JAVA("com.zhekasmirnov.innercore.api.mod.ui.icon.ItemIconSource").instance;
 var ItemList = /** @class */ (function () {
     function ItemList() {
@@ -195,24 +225,38 @@ var ItemList = /** @class */ (function () {
     ItemList.list = [];
     return ItemList;
 }());
+var McFontPaint = (function () {
+    var paint = new android.graphics.Paint();
+    paint.setTypeface(WRAP_JAVA("com.zhekasmirnov.innercore.utils.FileTools").getMcTypeface());
+    paint.setTextSize(16);
+    return paint;
+})();
 var UiFuncs;
 (function (UiFuncs) {
     UiFuncs.slotClicker = {
         onClick: function (container, tile, elem) {
             var source = elem.getBinding("source");
-            SubUI.openItemView(source.id, source.data, false) && UiFuncs.show404Anim(elem);
+            if (!Cfg.preventMistap || !isDuringPopup(elem)) {
+                SubUI.openItemView(source.id, source.data, false) && UiFuncs.show404Anim(elem);
+            }
         },
         onLongClick: function (container, tile, elem) {
             var source = elem.getBinding("source");
-            isDuringPopup(elem) || SubUI.openItemView(source.id, source.data, true) && UiFuncs.show404Anim(elem);
+            if (!Cfg.preventMistap || !isDuringPopup(elem)) {
+                SubUI.openItemView(source.id, source.data, true) && UiFuncs.show404Anim(elem);
+            }
         }
     };
     UiFuncs.tankClicker = {
         onClick: function (container, tile, elem) {
-            SubUI.openLiquidView(RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + ""), false) && UiFuncs.show404Anim(elem);
+            if (!Cfg.preventMistap || !isDuringPopup(elem)) {
+                SubUI.openLiquidView(RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + ""), false) && UiFuncs.show404Anim(elem);
+            }
         },
         onLongClick: function (container, tile, elem) {
-            isDuringPopup(elem) || SubUI.openLiquidView(RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + ""), true) && UiFuncs.show404Anim(elem);
+            if (!Cfg.preventMistap || !isDuringPopup(elem)) {
+                SubUI.openLiquidView(RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + ""), true) && UiFuncs.show404Anim(elem);
+            }
         }
     };
     UiFuncs.genOverlayWindow = function () {
@@ -220,13 +264,22 @@ var UiFuncs;
             location: { x: 0, y: 0, width: 1000, height: ScreenHeight },
             drawing: [{ type: "background", color: Color.TRANSPARENT }],
             elements: {
+                selectionFrame: {
+                    type: "image",
+                    x: -1000,
+                    y: -1000,
+                    width: 64,
+                    height: 64,
+                    scale: 1,
+                    bitmap: "_selection"
+                },
                 popupFrame: {
                     type: "image",
                     x: -1000,
                     y: -1000,
                     width: 64,
                     height: 64,
-                    scale: 3,
+                    scale: 1,
                     bitmap: "workbench_frame3"
                 },
                 popupText: {
@@ -234,7 +287,8 @@ var UiFuncs;
                     x: -1000,
                     y: -1000,
                     z: 1,
-                    font: { color: Color.WHITE, size: 24, shadow: 0.5, align: UI.Font.ALIGN_CENTER }
+                    font: { color: Color.WHITE, size: 16, shadow: 0.5 },
+                    multiline: true
                 },
                 notFound: {
                     type: "text",
@@ -268,30 +322,87 @@ var UiFuncs;
         ovl.setParentWindow(winGroup);
         ovl.open();
     };
+    UiFuncs.getElementName = function (elem) {
+        var iterator = elem.window.getContentProvider().elementMap.entrySet().iterator();
+        var entry;
+        while (iterator.hasNext()) {
+            entry = iterator.next();
+            if (elem.equals(entry.getValue())) {
+                return entry.getKey() + "";
+            }
+        }
+        return "";
+    };
+    var getWindowGroup = function (elem) {
+        var win = elem.window.getParentWindow();
+        if ("addWindow" in win) {
+            return win;
+        }
+        return win.getParentWindow(); //adjacent
+    };
     var FrameTex = UI.FrameTextureSource.get("workbench_frame3");
+    var FrameTexCentralColor = FrameTex.getCentralColor();
+    var createRect = function (w, h) {
+        var bitmap = new android.graphics.Bitmap.createBitmap(w | 0, h | 0, android.graphics.Bitmap.Config.ARGB_8888);
+        var canvas = new android.graphics.Canvas(bitmap);
+        canvas.drawARGB(127, 255, 255, 255);
+        return bitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, true);
+    };
     UiFuncs.popupTips = function (str, elem, event) {
-        var elements = elem.window.getParentWindow().getElements();
+        var location = elem.window.getLocation();
+        var elements = getWindowGroup(elem).getElements();
+        var selection = elements.get("selectionFrame");
         var text = elements.get("popupText");
         var frame = elements.get("popupFrame");
         var MOVEtoLONG_CLICK = event.type == "LONG_CLICK" && frame.x !== -1000 && frame.y !== -1000;
+        var x = 0;
+        var y = 0;
+        var w = 0;
+        var h = 0;
         if (str && (event.type == "MOVE" || MOVEtoLONG_CLICK)) {
-            var width = McFontPaint.measureText(str) + 30;
-            var location = elem.window.getLocation();
-            var x = location.x + location.windowToGlobal(event.x);
-            var y = location.y + location.windowToGlobal(event.y);
-            frame.texture = new UI.Texture(FrameTex.expandAndScale(width, 48, 3, FrameTex.getCentralColor()));
-            frame.setSize(width, 48);
-            frame.setPosition(Math_clamp(x - width / 2, 0, 1000 - width), Math.max(y - 100, 0));
-            text.setPosition(Math_clamp(x, width / 2, 1000 - width / 2), Math.max(y - 100, 0) - 3);
+            x = location.x + location.windowToGlobal(elem.x) | 0;
+            y = location.y + location.windowToGlobal(elem.y) | 0;
+            w = location.windowToGlobal(elem.elementRect.width()) | 0;
+            h = location.windowToGlobal(elem.elementRect.height()) | 0;
+            if (selection.elementRect.width() !== w || selection.elementRect.height() !== h) {
+                selection.texture = new UI.Texture(createRect(w, h));
+                selection.setSize(w, h);
+            }
+            selection.setPosition(x, y);
+            var split = str.split("\n");
+            w = Math.max.apply(Math, split.map(function (s) { return McFontPaint.measureText(s); })) + 20;
+            h = split.length * 18 + 16;
+            x = location.x + location.windowToGlobal(event.x);
+            y = location.y + location.windowToGlobal(event.y) - h - 50;
+            if (y < -10) {
+                y = location.y + location.windowToGlobal(event.y) + 70;
+            }
+            if (frame.elementRect.width() !== w || frame.elementRect.height() !== h) {
+                frame.texture = new UI.Texture(FrameTex.expandAndScale(w, h, 1, FrameTexCentralColor));
+                frame.setSize(w, h);
+            }
+            frame.setPosition(Math_clamp(x - w / 2, 0, 1000 - w), y);
+            text.setPosition(Math_clamp(x - w / 2, 0, 1000 - w) + 10, y + 7);
             text.setBinding("text", str);
+            if (!Threading.getThread("rv_popupTips")) {
+                Threading.initThread("rv_popupTips", function () {
+                    while (elem.isTouched) {
+                        java.lang.Thread.sleep(200);
+                    }
+                    selection.setPosition(-1000, -1000);
+                    frame.setPosition(-1000, -1000);
+                    text.setPosition(-1000, -1000);
+                });
+            }
         }
         else {
+            selection.setPosition(-1000, -1000);
             frame.setPosition(-1000, -1000);
             text.setPosition(-1000, -1000);
         }
     };
     var isDuringPopup = function (elem) {
-        var frame = elem.window.getParentWindow().getElements().get("popupFrame");
+        var frame = getWindowGroup(elem).getElements().get("popupFrame");
         return frame.x !== -1000 && frame.y !== -1000;
     };
     UiFuncs.onTouchSlot = function (elem, event) {
@@ -303,7 +414,7 @@ var UiFuncs;
         UiFuncs.popupTips(LiquidRegistry.isExists(liquid) ? LiquidRegistry.getLiquidName(liquid) : "", elem, event);
     };
     UiFuncs.show404Anim = function (elem) {
-        var window = elem.window.getParentWindow();
+        var window = getWindowGroup(elem);
         var text = window.getElements().get("notFound");
         var location = elem.window.getLocation();
         var x = location.x + location.windowToGlobal(elem.elementRect.centerX());
@@ -318,24 +429,36 @@ var UiFuncs;
         });
     };
 })(UiFuncs || (UiFuncs = {}));
-var McFontPaint = (function () {
-    var paint = new android.graphics.Paint();
-    paint.setTypeface(WRAP_JAVA("com.zhekasmirnov.innercore.utils.FileTools").getMcTypeface());
-    paint.setTextSize(24);
-    return paint;
-})();
 var RecipeType = /** @class */ (function () {
     function RecipeType(name, icon, content) {
+        var _this = this;
         this.name = name;
-        this.elems = { input: [], output: [], inputLiq: [], outputLiq: [] };
-        this.window = new UI.Window();
         this.icon = typeof icon === "number" ? { id: icon, count: 1, data: 0 } : __assign(__assign({}, icon), { count: 1 });
         content.params = content.params || {};
         content.params.slot = content.params.slot || "_default_slot_light";
         content.drawing = content.drawing || [];
         content.drawing.some(function (elem) { return elem.type === "background"; }) || content.drawing.unshift({ type: "background", color: Color.TRANSPARENT });
-        var templateSlot = { type: "slot", visual: true, clicker: UiFuncs.slotClicker, onTouchEvent: UiFuncs.onTouchSlot };
-        var templateTank = { type: "scale", direction: 1, clicker: UiFuncs.tankClicker, onTouchEvent: UiFuncs.onTouchTank };
+        var that = this;
+        var templateSlot = {
+            type: "slot",
+            visual: true,
+            clicker: UiFuncs.slotClicker,
+            onTouchEvent: function (elem, event) {
+                var name = elem.source.id !== 0 ? ItemList.getName(elem.source.id, elem.source.data) : "";
+                UiFuncs.popupTips(that.slotTooltip(name, elem.source, elem.getBinding("rv_tips")), elem, event);
+            }
+        };
+        var templateTank = {
+            type: "scale",
+            direction: 1,
+            clicker: UiFuncs.tankClicker,
+            onTouchEvent: function (elem, event) {
+                var liquid = RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + "");
+                var amount = elem.getBinding("value") * _this.tankLimit;
+                var name = LiquidRegistry.isExists(liquid) ? LiquidRegistry.getLiquidName(liquid) : "";
+                UiFuncs.popupTips(that.tankTooltip(name, { liquid: liquid, amount: amount }, elem.getBinding("rv_tips")), elem, event);
+            }
+        };
         var isInputSlot;
         var isOutputSlot;
         var isInputTank;
@@ -360,42 +483,78 @@ var RecipeType = /** @class */ (function () {
                 isOutputTank && outputTankSize++;
             }
         }
-        /*
-        before
-        x: 230,
-        y: 55,
-        width: 600,
-        height: 340
-        */
-        //same as SubUI Window "controller"
-        var location = new UI.WindowLocation({ x: (1000 - ScreenHeight * 1.5) / 2, y: 0, width: ScreenHeight * 1.5, height: ScreenHeight });
+        this.inputSlotSize = inputSlotSize;
+        this.outputSlotSize = outputSlotSize;
+        this.inputTankSize = inputTankSize;
+        this.outputTankSize = outputTankSize;
+        var locCtrler = new UI.WindowLocation({ x: (1000 - ScreenHeight * 1.5) / 2, y: 0, width: ScreenHeight * 1.5, height: ScreenHeight });
+        this.window = new UI.Window();
         this.window.setContent({
             location: {
-                x: location.x + location.windowToGlobal(120),
-                y: location.y + location.windowToGlobal(75),
-                padding: { top: location.y + location.windowToGlobal(75), bottom: location.windowToGlobal(75) },
-                width: location.windowToGlobal(860),
-                height: ScreenHeight - location.windowToGlobal(75)
+                x: locCtrler.x + locCtrler.windowToGlobal(120),
+                y: locCtrler.y + locCtrler.windowToGlobal(75),
+                width: locCtrler.windowToGlobal(860),
+                height: ScreenHeight - locCtrler.windowToGlobal(75 + 75)
             },
             params: content.params,
             drawing: content.drawing,
             //@ts-ignore
             elements: content.elements
         });
-        var elements = this.window.getElements();
-        for (var i = 0; i < inputSlotSize; i++) {
-            this.elems.input[i] = elements.get("input" + i);
-        }
-        for (var i = 0; i < outputSlotSize; i++) {
-            this.elems.output[i] = elements.get("output" + i);
-        }
-        for (var i = 0; i < inputTankSize; i++) {
-            this.elems.inputLiq[i] = elements.get("inputLiq" + i);
-        }
-        for (var i = 0; i < outputTankSize; i++) {
-            this.elems.outputLiq[i] = elements.get("outputLiq" + i);
-        }
+        this.windows = [this.window];
     }
+    RecipeType.prototype.setGridView = function (row, col, border /*Color*/) {
+        var content = this.window.getContent();
+        var locCtrler = new UI.WindowLocation({ x: (1000 - ScreenHeight * 1.5) / 2, y: 0, width: ScreenHeight * 1.5, height: ScreenHeight });
+        var x = locCtrler.x + locCtrler.windowToGlobal(120);
+        var y = locCtrler.y + locCtrler.windowToGlobal(75);
+        var w = locCtrler.windowToGlobal(860);
+        var h = (ScreenHeight - locCtrler.windowToGlobal(75 + 75));
+        var window;
+        this.windows.length = 0;
+        for (var c = 0; c < col; c++) {
+            for (var r = 0; r < row; r++) {
+                window = (c === 0 && r === 0) ? this.window : new UI.Window(__assign({}, content));
+                window.getLocation().set(x + w / col * c, y + h / row * r, w / col, h / row);
+                this.windows.push(window);
+            }
+        }
+        for (var i = 1; i < this.windows.length; i++) {
+            this.window.addAdjacentWindow(this.windows[i]);
+            this.windows[i].setParentWindow(this.window);
+        }
+        if (border) {
+            var color = typeof border === "boolean" ? Color.rgb(80, 70, 80) : border;
+            var location = new UI.WindowLocation({ x: x, y: y, width: w, height: h });
+            var lines = [];
+            var pos = 0;
+            for (var r = 1; r < row; r++) {
+                pos = location.getWindowHeight() / row * r;
+                lines.push({ type: "line", x1: 0, x2: 1000, y1: pos, y2: pos, color: color, width: 6 });
+            }
+            for (var c = 1; c < col; c++) {
+                pos = 1000 / col * c;
+                lines.push({ type: "line", x1: pos, x2: pos, y1: 0, y2: location.getWindowHeight(), color: color, width: 6 });
+            }
+            window = new UI.Window({
+                location: location.asScriptable(),
+                drawing: __spreadArray([
+                    { type: "background", color: Color.TRANSPARENT }
+                ], lines, true),
+                elements: {}
+            });
+            window.setTouchable(false);
+            this.window.addAdjacentWindow(window);
+        }
+        return this;
+    };
+    /*
+        setParentWindow(window: UI.WindowGroup): void {
+            for(let i = 0; i < this.windows.length; i++){
+                this.windows[i].setParentWindow(window);
+            }
+        }
+    */
     RecipeType.prototype.setDescription = function (text) {
         this.description = text;
         return this;
@@ -415,6 +574,9 @@ var RecipeType = /** @class */ (function () {
     };
     RecipeType.prototype.getWindow = function () {
         return this.window;
+    };
+    RecipeType.prototype.getRecipeCountPerPage = function () {
+        return this.windows.length;
     };
     RecipeType.prototype.getList = function (id, data, isUsage) {
         var list = this.getAllList();
@@ -452,35 +614,71 @@ var RecipeType = /** @class */ (function () {
     };
     RecipeType.prototype.onOpen = function (elements, recipe) {
     };
-    RecipeType.prototype.showRecipe = function (recipe) {
-        var _this = this;
-        this.onOpen(this.window.getElements(), recipe);
+    RecipeType.prototype.showRecipe = function (recipes) {
         var empty = { id: 0, count: 0, data: 0 };
-        this.elems.input.forEach(function (elem, i) {
-            elem.setBinding("source", recipe.input ? (recipe.input[i] || empty) : empty);
-        });
-        this.elems.output.forEach(function (elem, i) {
-            elem.setBinding("source", recipe.output ? (recipe.output[i] || empty) : empty);
-        });
-        this.elems.inputLiq.forEach(function (elem, i) {
-            if (recipe.inputLiq && recipe.inputLiq[i]) {
-                elem.setBinding("texture", LiquidRegistry.getLiquidUITexture(recipe.inputLiq[i].liquid, elem.elementRect.width(), elem.elementRect.height()));
-                elem.setBinding("value", recipe.inputLiq[i].amount / _this.tankLimit);
+        var recsPerPage = this.getRecipeCountPerPage();
+        var recipe;
+        var elements;
+        var elem;
+        for (var i = 0; i < recsPerPage; i++) {
+            recipe = recipes[i] || {};
+            elements = this.windows[i].getElements();
+            recipes[i] && this.onOpen(elements, recipe);
+            for (var j = 0; j < this.inputSlotSize; j++) {
+                elem = elements.get("input" + j);
+                if (recipe.input && recipe.input[j]) {
+                    elem.setBinding("source", { id: recipe.input[j].id, count: recipe.input[j].count, data: recipe.input[j].data });
+                    recipe.input[j].tips && elem.setBinding("rv_tips", recipe.input[j].tips);
+                }
+                else {
+                    elem.setBinding("source", empty);
+                    elem.setBinding("rv_tips", null);
+                }
             }
-            else {
-                elem.setBinding("value", 0);
+            for (var j = 0; j < this.outputSlotSize; j++) {
+                elem = elements.get("output" + j);
+                if (recipe.output && recipe.output[j]) {
+                    elem.setBinding("source", { id: recipe.output[j].id, count: recipe.output[j].count, data: recipe.output[j].data });
+                    recipe.output[j].tips && elem.setBinding("rv_tips", recipe.output[j].tips);
+                }
+                else {
+                    elem.setBinding("source", empty);
+                    elem.setBinding("rv_tips", null);
+                }
             }
-        });
-        this.elems.outputLiq.forEach(function (elem, i) {
-            if (recipe.outputLiq && recipe.outputLiq[i]) {
-                elem.setBinding("texture", LiquidRegistry.getLiquidUITexture(recipe.outputLiq[i].liquid, elem.elementRect.width(), elem.elementRect.height()));
-                elem.setBinding("value", recipe.outputLiq[i].amount / _this.tankLimit);
+            for (var j = 0; j < this.inputTankSize; j++) {
+                elem = elements.get("inputLiq" + j);
+                if (recipe.inputLiq && recipe.inputLiq[j]) {
+                    elem.setBinding("texture", LiquidRegistry.getLiquidUITexture(recipe.inputLiq[j].liquid, elem.elementRect.width(), elem.elementRect.height()));
+                    elem.setBinding("value", recipe.inputLiq[j].amount / this.tankLimit);
+                    recipe.inputLiq[j].tips && elem.setBinding("rv_tips", recipe.inputLiq[j].tips);
+                }
+                else {
+                    elem.setBinding("texture", "_default_slot_empty");
+                    elem.setBinding("value", 0);
+                    elem.setBinding("rv_tips", null);
+                }
             }
-            else {
-                elem.setBinding("texture", "_default_slot_empty");
-                elem.setBinding("value", 0);
+            for (var j = 0; j < this.outputTankSize; j++) {
+                elem = elements.get("outputLiq" + j);
+                if (recipe.outputLiq && recipe.outputLiq[j]) {
+                    elem.setBinding("texture", LiquidRegistry.getLiquidUITexture(recipe.outputLiq[j].liquid, elem.elementRect.width(), elem.elementRect.height()));
+                    elem.setBinding("value", recipe.outputLiq[j].amount / this.tankLimit);
+                    recipe.outputLiq[j].tips && elem.setBinding("rv_tips", recipe.outputLiq[j].tips);
+                }
+                else {
+                    elem.setBinding("texture", "_default_slot_empty");
+                    elem.setBinding("value", 0);
+                    elem.setBinding("rv_tips", null);
+                }
             }
-        });
+        }
+    };
+    RecipeType.prototype.slotTooltip = function (name, item, tips) {
+        return name;
+    };
+    RecipeType.prototype.tankTooltip = function (name, liquid, tips) {
+        return name;
     };
     return RecipeType;
 }());
@@ -709,6 +907,11 @@ var StartButton = new UI.Window({
     }
 });
 StartButton.setAsGameOverlay(true);
+Callback.addCallback("PostLoaded", function () {
+    var x = Cfg.buttonX;
+    var y = Cfg.buttonY;
+    StartButton.getLocation().set(x < 0 ? 1000 - (-x) : x, y < 0 ? ScreenHeight - (-y) : y, 64, 64);
+});
 var InventoryScreen = {
     inventory_screen: true,
     inventory_screen_pocket: true,
@@ -737,7 +940,7 @@ var MainUI = /** @class */ (function () {
         this.slotCountX = x2;
         this.slotCountY = this.calcSlotCountY();
         this.slotCount = this.slotCountX * this.slotCountY;
-        __config__.getValue("slotCountX").set(x2);
+        Cfg.set("slotCountX", x2);
         return true;
     };
     MainUI.changeSlotXCount = function (val) {
@@ -800,38 +1003,50 @@ var MainUI = /** @class */ (function () {
         this.page = 0;
     };
     MainUI.updateWindow = function () {
-        var elements = this.window.getElements();
-        var elem;
-        var maxPage = this.liquidMode ? (this.liqList.length / this.tankCount | 0) + 1 : (this.list.length / this.slotCount | 0) + 1;
+        var _this = this;
+        var threadName = "rv_MainUI_updateWindow";
+        this.whileDisplaying = false;
+        joinThread(threadName);
+        var maxPage = Math.ceil(this.liquidMode ? this.liqList.length / this.tankCount : this.list.length / this.slotCount);
         this.page = this.page < 0 ? maxPage - 1 : this.page >= maxPage ? 0 : this.page;
-        elements.get("textPage").setBinding("text", (this.page + 1) + " / " + maxPage);
+        this.window.getElements().get("textPage").setBinding("text", (this.page + 1) + " / " + maxPage);
         if (this.liquidMode) {
-            elements = this.tanksWindow.getElements();
-            var liquid = void 0;
-            for (var i = 0; i < this.tankCount; i++) {
-                elem = elements.get("tank" + i);
-                liquid = this.liqList[this.tankCount * this.page + i];
-                if (liquid) {
-                    elem.setBinding("texture", LiquidRegistry.getLiquidUITexture(liquid, elem.elementRect.width(), elem.elementRect.height()));
-                    elem.setBinding("value", 1);
+            Threading.initThread(threadName, function () {
+                var elems = _this.tanksWindow.getElements();
+                var elem;
+                var liquid;
+                _this.whileDisplaying = true;
+                for (var i = 0; i < _this.tankCount && _this.whileDisplaying; i++) {
+                    elem = elems.get("tank" + i);
+                    liquid = _this.liqList[_this.tankCount * _this.page + i];
+                    if (liquid) {
+                        elem.setBinding("texture", LiquidRegistry.getLiquidUITexture(liquid, elem.elementRect.width(), elem.elementRect.height()));
+                        elem.setBinding("value", 1);
+                    }
+                    else {
+                        elem.setBinding("texture", "_default_slot_empty");
+                        elem.setBinding("value", 0);
+                    }
                 }
-                else {
-                    elem.setBinding("texture", "_default_slot_empty");
-                    elem.setBinding("value", 0);
-                }
-            }
+            });
         }
         else {
-            elements = this.slotsWindow.getElements();
-            var item = void 0;
-            for (var i = 0; i < this.slotCount; i++) {
-                item = this.list[this.slotCount * this.page + i];
-                elements.get("slot" + i).setBinding("source", item ? { id: item.id, count: 1, data: item.data } : { id: 0, count: 0, data: 0 });
-            }
+            Threading.initThread(threadName, function () {
+                var elems = _this.slotsWindow.getElements();
+                var empty = { id: 0, count: 0, data: 0 };
+                var item;
+                _this.whileDisplaying = true;
+                java.lang.Thread.sleep(20);
+                for (var i = 0; i < _this.slotCount && _this.whileDisplaying; i++) {
+                    item = _this.list[_this.slotCount * _this.page + i];
+                    elems.get("slot" + i).setBinding("source", item ? { id: item.id, count: 1, data: item.data } : empty);
+                }
+            });
         }
     };
     MainUI.openWindow = function (list) {
         if (list === void 0) { list = ItemList.get(); }
+        joinThread("rv_LevelLoaded", "[RV]: Waiting for preparations");
         this.list = list;
         this.liqList = Object.keys(LiquidRegistry.liquids);
         this.window.open();
@@ -1011,7 +1226,7 @@ var MainUI = /** @class */ (function () {
                 textPage: { type: "text", x: 750, y: ScreenHeight - 75, font: { size: 40, align: UI.Font.ALIGN_CENTER } }
             }
         });
-        _a.setSlotCount(__config__.getNumber("slotCountX").intValue());
+        _a.setSlotCount(Cfg.slotCountX);
         _a.refreshSlotsWindow();
         window.addWindowInstance("list", _a.slotsWindow);
         window.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
@@ -1028,6 +1243,7 @@ var MainUI = /** @class */ (function () {
         });
         return window;
     })();
+    MainUI.whileDisplaying = false;
     return MainUI;
 }());
 var ViewMode = {
@@ -1055,21 +1271,15 @@ var SubUI = /** @class */ (function () {
                 visual: true,
                 clicker: {
                     onClick: function (container, tile, elem) {
-                        elem.source.id && _this.changeWindow(elem.y / 1000 | 0);
+                        var index = parseInt(UiFuncs.getElementName(elem).slice(("icon").length));
+                        elem.source.id && _this.changeWindow(index);
                     },
                     onLongClick: function (container, tile, elem) {
+                        var index = parseInt(UiFuncs.getElementName(elem).slice(("icon").length));
                         var view = _this.getView();
-                        var key = view.tray[elem.y / 1000 | 0];
-                        _this.openListView([key]);
+                        _this.openListView([view.tray[index]]);
                     }
-                },
-                /*
-                onTouchEvent: (elem, event) => {
-                    const view = this.getView();
-                    const key = view.tray[elem.y / 1000 | 0];
-                    RecipeType.onTouch.popup(RecipeTypeRegistry.isExist(key) ? RecipeTypeRegistry.get(key).getName() : "", elem, event);
                 }
-                */
             };
             elements["description" + i] = {
                 type: "text",
@@ -1098,6 +1308,7 @@ var SubUI = /** @class */ (function () {
         return this.recent[this.recent.length - 1];
     };
     SubUI.openItemView = function (id, data, isUsage) {
+        joinThread("rv_LevelLoaded", "[RV]: Waiting for preparations");
         var currentView = this.getView();
         if (id === 0 || isItemView(currentView) && currentView.id === id && currentView.data === data && currentView.isUsage === isUsage) {
             return false;
@@ -1114,6 +1325,7 @@ var SubUI = /** @class */ (function () {
         return false;
     };
     SubUI.openLiquidView = function (liquid, isUsage) {
+        joinThread("rv_LevelLoaded", "[RV]: Waiting for preparations");
         var currentView = this.getView();
         if (liquid === "" || isLiquidView(currentView) && currentView.liquid === liquid && currentView.isUsage === isUsage) {
             return false;
@@ -1130,6 +1342,7 @@ var SubUI = /** @class */ (function () {
         return false;
     };
     SubUI.openListView = function (recipes) {
+        joinThread("rv_LevelLoaded", "[RV]: Waiting for preparations");
         var currentView = this.getView();
         var tray = recipes.filter(function (recipe) { return RecipeTypeRegistry.isExist(recipe) && RecipeTypeRegistry.get(recipe).getAllList().length > 0; });
         if (tray.length === 0 || isListView(currentView) && __spreadArray([], currentView.tray, true).sort().join(",") === __spreadArray([], tray, true).sort().join(",")) {
@@ -1175,7 +1388,7 @@ var SubUI = /** @class */ (function () {
             this.changeWindow(0);
         }
         catch (e) {
-            alert("up: " + e);
+            alert("SubUI.UpdateWindow\n" + e);
         }
     };
     SubUI.changeWindow = function (index) {
@@ -1205,12 +1418,14 @@ var SubUI = /** @class */ (function () {
             return;
         }
         var recipeType = RecipeTypeRegistry.get(this.select);
+        var recsPerPage = recipeType.getRecipeCountPerPage();
         var elements = this.window.getWindow("controller").getElements();
-        this.page = page < 0 ? this.list.length - 1 : page >= this.list.length ? 0 : page;
-        elements.get("scrollPage").setBinding("raw-value", java.lang.Float.valueOf(this.page / (this.list.length - 1)));
-        elements.get("textPage").setBinding("text", (this.page + 1) + " / " + this.list.length);
-        elements.get("textPage").setPosition(300 + (this.page < this.list.length / 2 ? 400 : 100), 590);
-        recipeType.showRecipe(this.list[this.page]);
+        var maxPage = Math.ceil(this.list.length / recsPerPage);
+        this.page = page < 0 ? maxPage - 1 : page >= maxPage ? 0 : page;
+        elements.get("scrollPage").setBinding("raw-value", java.lang.Float.valueOf(this.page / (maxPage - 1)));
+        elements.get("textPage").setBinding("text", (this.page + 1) + " / " + maxPage);
+        elements.get("textPage").setPosition(300 + (this.page < maxPage / 2 ? 400 : 100), 590);
+        recipeType.showRecipe(this.list.slice(this.page * recsPerPage, this.page * recsPerPage + recsPerPage));
     };
     var _a;
     _a = SubUI;
@@ -1271,22 +1486,17 @@ var SubUI = /** @class */ (function () {
                         }
                     },
                     /*
-                                        onTouchEvent: (elem, event) => {
-                                            if(event.type == "DOWN"){
-                                                Threading.initThread("rv_holdButton", () => {
-                                                    let time = 0;
-                                                    alert(elem.isReleased());
-                                                    while(!elem.isReleased()){
-                                                        if(time > 10){
-                                                            if(time % 10 === 0)this.turnPage(this.page - 1);
-                                                        }
-                                                        time++;
-                                                        alert(time);
-                                                        java.lang.Thread.sleep(50);
-                                                    }
-                                                });
-                                            }
-                                        }
+                    onTouchEvent(elem, event){
+                        const that = this;
+                        Threading.initThread("rv_holdButton", () => {
+                            java.lang.Thread.sleep(500);
+                            while(elem.isTouched){
+                                that.turnPage(that.page - 1);
+                                java.lang.Thread.sleep(200);
+                            }
+                            alert("Touch Finish!");
+                        });
+                    }
                     */
                 },
                 buttonNext: {
@@ -1309,10 +1519,12 @@ var SubUI = /** @class */ (function () {
                     bitmapBg: "_default_slot_empty",
                     bitmapBgHover: "_default_slot_empty",
                     onTouchEvent: function (elem, event) {
-                        var len = _a.list.length - 1;
-                        var page = Math.round(event.localX * len);
+                        var recipeType = RecipeTypeRegistry.get(_a.select);
+                        var recsPerPage = recipeType.getRecipeCountPerPage();
+                        var maxPage = Math.ceil(_a.list.length / recsPerPage) - 1;
+                        var page = Math.round(event.localX * maxPage);
                         _a.turnPage(page);
-                        event.localX = page / len;
+                        event.localX = page / maxPage;
                     }
                 },
                 textPage: { type: "text", x: 300 + 400, y: 590, font: { size: 32, align: UI.Font.ALIGN_CENTER } }
@@ -1339,7 +1551,10 @@ var RButton = /** @class */ (function () {
     function RButton() {
     }
     RButton.putOnNativeGui = function (screenName, recipeKey) {
-        this.data[screenName] = typeof recipeKey === "string" ? [recipeKey] : recipeKey;
+        var recipes = (typeof recipeKey === "string" ? [recipeKey] : recipeKey).filter(function (key) { return RecipeTypeRegistry.isExist(key); });
+        if (recipes.length > 0) {
+            this.data[screenName] = recipes;
+        }
     };
     RButton.onNativeGuiChanged = function (screen) {
         this.currentScreen = screen;
@@ -1446,20 +1661,22 @@ var WorkbenchRecipe = /** @class */ (function (_super) {
     };
     return WorkbenchRecipe;
 }(RecipeType));
-RecipeTypeRegistry.register("workbench", new WorkbenchRecipe());
-RButton.putOnNativeGui("innercore_generic_crafting_screen", "workbench");
 var FurnaceRecipe = /** @class */ (function (_super) {
     __extends(FurnaceRecipe, _super);
     function FurnaceRecipe() {
-        return _super.call(this, "Smelting", VanillaBlockID.furnace, {
+        var _this = this;
+        var top = 40;
+        _this = _super.call(this, "Smelting", VanillaBlockID.furnace, {
             drawing: [
-                { type: "bitmap", x: 440, y: 185, scale: 2, bitmap: "_workbench_bar" }
+                { type: "bitmap", x: 500 - 66, y: 15 + top, scale: 6, bitmap: "rv.arrow_right" }
             ],
             elements: {
-                input0: { x: 280, y: 190, size: 120 },
-                output0: { x: 600, y: 190, size: 120 }
+                input0: { x: 500 - 66 - 180, y: top, size: 120 },
+                output0: { x: 500 + 66 + 60, y: top, size: 120 }
             }
         }) || this;
+        _this.setGridView(3, 1, true);
+        return _this;
     }
     FurnaceRecipe.prototype.getAllList = function () {
         var list = [];
@@ -1482,18 +1699,22 @@ var FurnaceFuelRecipe = /** @class */ (function (_super) {
     function FurnaceFuelRecipe() {
         var _this = _super.call(this, "Furnace Fuel", VanillaBlockID.furnace, {
             drawing: [
-                { type: "bitmap", x: 290, y: 140, scale: 8, bitmap: "rv.furnace_burn" }
+                { type: "bitmap", x: 500 - 104, y: 300 - 240, scale: 16, bitmap: "rv.furnace_burn" }
             ],
             elements: {
-                input0: { x: 280, y: 260, size: 120 },
-                text: { type: "text", x: 450, y: 220, multiline: true, font: { size: 40, color: Color.WHITE, shadow: 0.5 } }
+                input0: { x: 500 - 120, y: 300, size: 240 },
+                text: { type: "text", x: 500, y: 600, multiline: true, font: { size: 80, color: Color.WHITE, shadow: 0.5, align: UI.Font.ALIGN_CENTER } }
             }
         }) || this;
+        _this.setGridView(2, 3, true);
         _this.setDescription("Fuel");
         return _this;
     }
     FurnaceFuelRecipe.prototype.getAllList = function () {
-        return ItemList.get().filter(function (item) { return Recipes.getFuelBurnDuration(item.id, item.data) > 0; }).map(function (item) { return ({ input: [{ id: item.id, count: 1, data: item.data }] }); });
+        return ItemList.get()
+            .filter(function (item) { return Recipes.getFuelBurnDuration(item.id, item.data) > 0; })
+            .sort(function (a, b) { return Recipes.getFuelBurnDuration(b.id, b.data) - Recipes.getFuelBurnDuration(a.id, a.data); })
+            .map(function (item) { return ({ input: [{ id: item.id, count: 1, data: item.data }] }); });
     };
     FurnaceFuelRecipe.prototype.getList = function (id, data, isUsage) {
         return isUsage && Recipes.getFuelBurnDuration(id, data) > 0 ? [{ input: [{ id: id, count: 1, data: data }] }] : [];
@@ -1505,21 +1726,21 @@ var FurnaceFuelRecipe = /** @class */ (function (_super) {
     };
     return FurnaceFuelRecipe;
 }(RecipeType));
-RecipeTypeRegistry.register("furnace", new FurnaceRecipe());
-RecipeTypeRegistry.register("fuel", new FurnaceFuelRecipe());
-RButton.putOnNativeGui("furnace_screen", ["furnace", "fuel"]);
 var LikeFurnaceRecipe = /** @class */ (function (_super) {
     __extends(LikeFurnaceRecipe, _super);
     function LikeFurnaceRecipe(name, icon) {
-        var _this = _super.call(this, name, icon, {
+        var _this = this;
+        var top = 40;
+        _this = _super.call(this, name, icon, {
             drawing: [
-                { type: "bitmap", x: 440, y: 185, scale: 2, bitmap: "_workbench_bar" }
+                { type: "bitmap", x: 500 - 66, y: 15 + top, scale: 6, bitmap: "rv.arrow_right" }
             ],
             elements: {
-                input0: { x: 280, y: 190, size: 120 },
-                output0: { x: 600, y: 190, size: 120 }
+                input0: { x: 500 - 66 - 180, y: top, size: 120 },
+                output0: { x: 500 + 66 + 60, y: top, size: 120 }
             }
         }) || this;
+        _this.setGridView(3, 1, true);
         _this.recipeList = [];
         return _this;
     }
@@ -1537,11 +1758,6 @@ var LikeFurnaceRecipe = /** @class */ (function (_super) {
 var BlastFurnaceRecipe = new LikeFurnaceRecipe("Blast Furnece", VanillaBlockID.blast_furnace);
 var SmokerRecipe = new LikeFurnaceRecipe("Smoker", VanillaBlockID.smoker);
 var CampfireRecipe = new LikeFurnaceRecipe("Campfire", VanillaBlockID.campfire);
-RecipeTypeRegistry.register("blast_furnace", BlastFurnaceRecipe);
-RecipeTypeRegistry.register("smoker", SmokerRecipe);
-RecipeTypeRegistry.register("campfire", CampfireRecipe);
-RButton.putOnNativeGui("blast_furnace_screen", ["blast_furnace", "fuel"]);
-RButton.putOnNativeGui("smoker_screen", ["smoker", "fuel"]);
 var BrewingRecipe = /** @class */ (function (_super) {
     __extends(BrewingRecipe, _super);
     function BrewingRecipe() {
@@ -1681,34 +1897,30 @@ var BrewingRecipe = /** @class */ (function (_super) {
     })();
     return BrewingRecipe;
 }(RecipeType));
-RecipeTypeRegistry.register("brewing", new BrewingRecipe());
-RButton.putOnNativeGui("brewing_stand_screen", "brewing");
 var StonecutterRecipe = /** @class */ (function (_super) {
     __extends(StonecutterRecipe, _super);
     function StonecutterRecipe() {
-        return _super.call(this, "Stonecutter", VanillaBlockID.stonecutter_block, {
+        var _this = _super.call(this, "Stonecutter", VanillaBlockID.stonecutter_block, {
             drawing: [
-                { type: "bitmap", x: 455, y: 130, scale: 6, bitmap: "rv.bar_stonecutter" }
+                { type: "bitmap", x: 320, y: 520 + 400, scale: 24, bitmap: "rv.arrow_down" }
             ],
             elements: {
-                input0: { x: 440, y: 0, size: 120 },
-                output0: { x: 260, y: 270, size: 120 },
-                output1: { x: 380, y: 270, size: 120 },
-                output2: { x: 500, y: 270, size: 120 },
-                output3: { x: 620, y: 270, size: 120 },
-                output4: { x: 260, y: 390, size: 120 },
-                output5: { x: 380, y: 390, size: 120 },
-                output6: { x: 500, y: 390, size: 120 },
-                output7: { x: 620, y: 390, size: 120 }
+                input0: { x: 260, y: 400, size: 480 },
+                output0: { x: 260, y: 1088 + 400, size: 480 }
             }
         }) || this;
+        _this.setGridView(1, 4, true);
+        return _this;
     }
     StonecutterRecipe.registerRecipe = function (input, output) {
-        var find = this.recipeList.find(function (recipe) {
-            var item = recipe.input[0];
+        /*
+        const find = this.recipeList.find(function(recipe){
+            const item = recipe.input[0];
             return item.id === input.id && item.count === input.count && item.data === input.data;
         });
-        find ? find.output.push(output) : this.recipeList.push({ input: [input], output: [output] });
+        find ? find.output.push(output) : this.recipeList.push({input: [input], output: [output]});
+        */
+        this.recipeList.push({ input: [input], output: [output] });
     };
     StonecutterRecipe.prototype.getAllList = function () {
         return StonecutterRecipe.recipeList;
@@ -1716,8 +1928,44 @@ var StonecutterRecipe = /** @class */ (function (_super) {
     StonecutterRecipe.recipeList = [];
     return StonecutterRecipe;
 }(RecipeType));
-RecipeTypeRegistry.register("stonecutter", new StonecutterRecipe());
-RButton.putOnNativeGui("stonecutter_screen", "stonecutter");
+var SmithingRecipe = /** @class */ (function (_super) {
+    __extends(SmithingRecipe, _super);
+    function SmithingRecipe() {
+        var _this = this;
+        var top = 100;
+        _this = _super.call(this, "Smithing", VanillaBlockID.smithing_table, {
+            drawing: [
+                { type: "bitmap", x: 281, y: 21 + top, scale: 6, bitmap: "rv.plus" },
+                { type: "bitmap", x: 614, y: 15 + top, scale: 6, bitmap: "rv.arrow_right" }
+            ],
+            elements: {
+                input0: { x: 80, y: top, size: 120 },
+                input1: { x: 440, y: top, size: 120 },
+                output0: { x: 800, y: top, size: 120 }
+            }
+        }) || this;
+        _this.setGridView(2, 1, true);
+        return _this;
+    }
+    SmithingRecipe.overrideList = function (recipeList) {
+        this.recipeList = recipeList;
+    };
+    SmithingRecipe.prototype.getAllList = function () {
+        return SmithingRecipe.recipeList;
+    };
+    SmithingRecipe.recipeList = [
+        { input: [{ id: VanillaItemID.diamond_sword, count: 1, data: -1 }, { id: 728, count: 1, data: -1 }], output: [{ id: 727, count: 1, data: -1 }] },
+        { input: [{ id: VanillaItemID.diamond_shovel, count: 1, data: -1 }, { id: 728, count: 1, data: -1 }], output: [{ id: 726, count: 1, data: -1 }] },
+        { input: [{ id: VanillaItemID.diamond_pickaxe, count: 1, data: -1 }, { id: 728, count: 1, data: -1 }], output: [{ id: 804, count: 1, data: -1 }] },
+        { input: [{ id: VanillaItemID.diamond_axe, count: 1, data: -1 }, { id: 728, count: 1, data: -1 }], output: [{ id: 835, count: 1, data: -1 }] },
+        { input: [{ id: VanillaItemID.diamond_hoe, count: 1, data: -1 }, { id: 728, count: 1, data: -1 }], output: [{ id: 880, count: 1, data: -1 }] },
+        { input: [{ id: VanillaItemID.diamond_helmet, count: 1, data: -1 }, { id: 728, count: 1, data: -1 }], output: [{ id: 764, count: 1, data: -1 }] },
+        { input: [{ id: VanillaItemID.diamond_chestplate, count: 1, data: -1 }, { id: 728, count: 1, data: -1 }], output: [{ id: 834, count: 1, data: -1 }] },
+        { input: [{ id: VanillaItemID.diamond_leggings, count: 1, data: -1 }, { id: 728, count: 1, data: -1 }], output: [{ id: 725, count: 1, data: -1 }] },
+        { input: [{ id: VanillaItemID.diamond_boots, count: 1, data: -1 }, { id: 728, count: 1, data: -1 }], output: [{ id: 813, count: 1, data: -1 }] }
+    ];
+    return SmithingRecipe;
+}(RecipeType));
 var TradingRecipe = /** @class */ (function (_super) {
     __extends(TradingRecipe, _super);
     function TradingRecipe() {
@@ -1747,8 +1995,8 @@ var TradingRecipe = /** @class */ (function (_super) {
     };
     TradingRecipe.prototype.onOpen = function (elements, recipe) {
         elements.get("textInfo").setBinding("text", "Level ".concat(recipe.info.tier, " - ").concat(recipe.info.job));
-        elements.get("textCount0").setBinding("text", recipe.quantity[0] ? recipe.quantity[0].min + "-" + recipe.quantity[0].max : "");
-        elements.get("textCount1").setBinding("text", recipe.quantity[1] ? recipe.quantity[1].min + "-" + recipe.quantity[1].max : "");
+        elements.get("textCount0").setBinding("text", recipe.quantity[0] ? MinMaxtoString(recipe.quantity[0]) : "");
+        elements.get("textCount1").setBinding("text", recipe.quantity[1] ? MinMaxtoString(recipe.quantity[1]) : "");
         elements.get("textEnch").setBinding("text", recipe.isEnchanted ? "Enchanted" : "");
     };
     TradingRecipe.setup = function () {
@@ -1804,23 +2052,24 @@ var TradingRecipe = /** @class */ (function (_super) {
     TradingRecipe.allTrade = [];
     return TradingRecipe;
 }(RecipeType));
-RecipeTypeRegistry.register("trading", new TradingRecipe());
-RButton.putOnNativeGui("trade_screen", "trading");
 var LiquidFillingRecipe = /** @class */ (function (_super) {
     __extends(LiquidFillingRecipe, _super);
     function LiquidFillingRecipe() {
-        var _this = _super.call(this, "Liquid Filling", VanillaItemID.bucket, {
+        var _this = this;
+        var top = 50;
+        var size = 300;
+        _this = _super.call(this, "Liquid Filling", VanillaItemID.bucket, {
             drawing: [
-                { type: "frame", x: 450, y: 50, width: 100, height: 400, scale: 4, bitmap: "default_container_frame" },
-                { type: "bitmap", x: 330 + 28, y: 190 + 28, scale: 1, bitmap: "_workbench_bar" },
-                { type: "bitmap", x: 550 + 28, y: 190 + 28, scale: 1, bitmap: "_workbench_bar" }
+                { type: "frame", x: 500 - size / 2, y: size * 2 + top, width: size, height: size, scale: 12, bitmap: "default_container_frame" },
+                { type: "bitmap", x: 500 - 90, y: size + 18 + top, scale: 12, bitmap: "rv.arrow_down" }
             ],
             elements: {
-                input0: { x: 210, y: 190, size: 120 },
-                output0: { x: 670, y: 190, size: 120 },
-                inputLiq0: { x: 450 + 4, y: 50 + 4, width: 100 - 8, height: 400 - 8 }
+                input0: { x: 500 - size / 2, y: top, size: size },
+                output0: { x: 500 - size / 2, y: size * 3.75 + top, size: size },
+                inputLiq0: { x: 500 - size / 2 + 12, y: size * 2 + 12 + top, width: size - 24, height: size - 24 }
             }
         }) || this;
+        _this.setGridView(1, 3, true);
         _this.setTankLimit(1000);
         return _this;
     }
@@ -1841,17 +2090,314 @@ var LiquidFillingRecipe = /** @class */ (function (_super) {
     };
     return LiquidFillingRecipe;
 }(RecipeType));
-RecipeTypeRegistry.register("liquid_filling", new LiquidFillingRecipe());
+/*
+
+interface LootTips {
+    pools: number;
+    rolls: MinMax;
+    count: MinMax;
+    data: MinMax;
+    weight: number;
+    weight_sum: number;
+    random_chance: number;
+    killed_by_player: boolean;
+}
+
+interface LootRecipePattern extends RecipePattern {
+    tips: LootTips[]
+}
+
+
+class LootRecipe extends RecipeType {
+
+    private recipeList: RecipePattern[] = [];
+
+    constructor(name: string, icon: number | Tile, description?: string){
+
+        const elements: {[key: string]: Partial<UI.UIElement>} = {
+            textName: {type: "text", x: 180, y: 20, font: {size: 40, color: Color.WHITE, shadow: 0.5}}
+        };
+
+        for(let i = 0; i < 18; i++){
+            elements["output" + i] = {
+                x: (i % 6) * 100 + 200,
+                y: (i / 6 | 0) * 100 + 120,
+                size: 100
+            };
+        }
+
+        super(name, icon, {
+            drawing: [],
+            elements: elements
+        });
+
+        if(description){
+            this.setDescription(description);
+        }
+
+    }
+
+    getAllList(): RecipePattern[] {
+        return this.recipeList;
+    }
+
+    onOpen(elements: java.util.HashMap<string, UI.Element>, recipe: RecipePattern): void {
+        elements.get("textName").setBinding("text", recipe.name);
+    }
+
+    registerRecipe(name: string, json: KEX.LootModule.LootTableTypes.JsonFormat): void {
+
+        const items: ItemInstanceWithTips[] = [];
+
+        json.pools.forEach((pool, n) => {
+
+            let condition: KEX.LootModule.LootTableTypes.Conditions;
+            let entry: KEX.LootModule.LootTableTypes.Entries;
+            let func: KEX.LootModule.LootTableTypes.EntryFunctions;
+
+            let count: MinMax;
+            let data: MinMax;
+
+            let killed_by_player = false;
+            let random_chance = 1;
+
+            if(pool.conditions){
+
+                for(let i = 0; i < pool.conditions.length; i++){
+
+                    condition = pool.conditions[i];
+
+                    switch(condition.condition){
+                        case "killed_by_player":
+                        case "killed_by_player_or_pets":
+                            killed_by_player = true;
+                        break;
+                        case "random_chance":
+                        case "random_chance_with_looting":
+                            random_chance = condition.chance;
+                        break;
+                    }
+
+                }
+
+            }
+
+            if(pool.entries){
+
+                const weightSum = pool.entries.reduce((sum, ent) => {
+                    if(ent.type === "item"){
+                        return sum + (ent.weight || 0);
+                    }
+                    return sum;
+                }, 0);
+
+                for(let i = 0; i < pool.entries.length; i++){
+
+                    entry = pool.entries[i];
+
+                    switch(entry.type){
+
+                        case "item":
+
+                            count = unifyMinMax(entry.count || 1);
+                            data = unifyMinMax(0);
+
+                            if(entry.functions){
+                                for(let j = 0; j < entry.functions.length; j++){
+                                    func = entry.functions[j];
+                                    switch(func.function){
+                                        case "set_count":
+                                            count = unifyMinMax(func.count);
+                                        break;
+                                        case "set_data":
+                                            data = unifyMinMax(func.data);
+                                        break;
+                                    }
+                                }
+                            }
+
+                            items.push({
+                                id: getNumericID(entry.name),
+                                count: Math.max(count.min, 1),
+                                data: data && data.min === data.max ? data.min : -1,
+                                tips: {
+                                    pools: n,
+                                    count: count,
+                                    data: data,
+                                    weight: entry.weight,
+                                    weight_sum: weightSum,
+                                    random_chance: random_chance,
+                                    killed_by_player: killed_by_player
+                                }
+                            });
+
+                        break;
+
+                    }
+
+                }
+
+            }
+
+        });
+
+        this.recipeList.push({name: name, output: items});
+
+    }
+
+    slotTooltip(name: string, item: ItemInstance, tips: LootTips): string {
+        let tooltip = "";
+        tooltip += "Pool " + tips.pools;
+        if(tips.random_chance){
+            tooltip += " (" + (Math.round(tips.random_chance * 1000) / 10) + "%)";
+        }
+        tooltip += "\nrolls: " + MinMaxtoString(tips.rolls);
+        tooltip += "\ncount: " + MinMaxtoString(tips.count);
+        if(tips.weight){
+            tooltip += `\nweight: ${tips.weight} (${Math.round(tips.weight / tips.weight_sum * 1000) / 10}%)`;
+        }
+        if(tips.killed_by_player){
+            tooltip += "\nKilled By Player";
+        }
+        return "[" + name + "]\n" + tooltip;
+    }
+
+}
+
+
+const MobDropRecipe = new LootRecipe("Mob Drop", VanillaItemID.iron_sword);
+
+RecipeTypeRegistry.register("mob_drop", MobDropRecipe);
+
+
+class BlockDropRecipe extends RecipeType {
+
+    constructor(){
+
+        const elements: {[key: string]: Partial<UI.UIElement>} = {
+            input0: {x: 0, y: 0, size: 100}
+        };
+
+        for(let i = 0; i < 18; i++){
+            elements["output" + i] = {
+                x: (i % 6) * 100 + 200,
+                y: (i / 6 | 0) * 100 + 120,
+                size: 100
+            };
+        }
+
+        super("Block Drop", VanillaItemID.iron_pickaxe, {
+            drawing: [],
+            elements: elements
+        });
+
+    }
+
+    getAllList(): RecipePattern[] {
+        const list: RecipePattern[] = [];
+        ItemList.get().filter(iteminfo => iteminfo.type === "block").forEach(block => {
+            const output: ItemInstance[] = [];
+            const dropFunc = Block.getDropFunction(block.id);
+            let drops: [number, number, number, number?][] = [];
+            if(dropFunc){
+                try{
+                    drops = dropFunc({x: 0, y: 0, z: 0, relative: {x: 0, y: 0, z: 0}, side: -1}, block.id, block.data, 10, {silk: false, fortune: 0, efficiency: 0, unbreaking: 0, experience: 0}, {id: 0, count: 0, data: 0}, BlockSource.getDefaultForActor(Player.get())) || [];
+                }
+                catch(e){
+                    return;
+                }
+            }
+            if(drops.length > 0){
+                list.push({
+                    input: [{id: block.id, count: 1, data: block.data}],
+                    output: drops.map(block => ({id: block[0], count: block[1], data: block[2]}))
+                });
+            }
+        });
+        return list;
+    }
+
+}
+
+RecipeTypeRegistry.register("block_drop", new BlockDropRecipe());
+
+*/ 
+(function () {
+    if (Cfg.$workbench) {
+        RecipeTypeRegistry.register("workbench", new WorkbenchRecipe());
+    }
+    if (Cfg.$furnace) {
+        RecipeTypeRegistry.register("furnace", new FurnaceRecipe());
+    }
+    if (Cfg.$fuel) {
+        RecipeTypeRegistry.register("fuel", new FurnaceFuelRecipe());
+    }
+    if (Cfg.$blast_furnace) {
+        RecipeTypeRegistry.register("blast_furnace", BlastFurnaceRecipe);
+    }
+    if (Cfg.$smoker) {
+        RecipeTypeRegistry.register("smoker", SmokerRecipe);
+    }
+    if (Cfg.$campfire) {
+        RecipeTypeRegistry.register("campfire", CampfireRecipe);
+    }
+    if (Cfg.$brewing) {
+        RecipeTypeRegistry.register("brewing", new BrewingRecipe());
+    }
+    if (Cfg.$stonecutter) {
+        RecipeTypeRegistry.register("stonecutter", new StonecutterRecipe());
+    }
+    if (Cfg.$smithing && !isLegacy) {
+        RecipeTypeRegistry.register("smithing", new SmithingRecipe());
+    }
+    if (Cfg.$trading) {
+        RecipeTypeRegistry.register("trading", new TradingRecipe());
+    }
+    if (Cfg.$liquid_filling) {
+        RecipeTypeRegistry.register("liquid_filling", new LiquidFillingRecipe());
+    }
+    RButton.putOnNativeGui("innercore_generic_crafting_screen", "workbench");
+    RButton.putOnNativeGui("furnace_screen", ["furnace", "fuel"]);
+    RButton.putOnNativeGui("blast_furnace_screen", ["blast_furnace", "fuel"]);
+    RButton.putOnNativeGui("smoker_screen", ["smoker", "fuel"]);
+    RButton.putOnNativeGui("brewing_stand_screen", "brewing");
+    RButton.putOnNativeGui("stonecutter_screen", "stonecutter");
+    RButton.putOnNativeGui("smithing_table_screen", "smithing");
+    RButton.putOnNativeGui("trade_screen", "trading");
+})();
+ModAPI.addAPICallback("KernelExtension", function (api) {
+    if (typeof api.getKEXVersionCode !== "function" || api.getKEXVersionCode() < 300) {
+        return;
+    }
+    getNumericID = function (key) { return api.AddonUtils.getNumericIdFromIdentifier(String(key).slice(("minecraft:").length)); };
+    SmithingRecipe.overrideList(Recipes.getAllSmithingTableRecipes().map(function (recipe) { return ({
+        input: [
+            { id: recipe.baseID, count: 1, data: -1 },
+            { id: recipe.additionID, count: 1, data: -1 }
+        ],
+        output: [{ id: recipe.resultID, count: 1, data: -1 }]
+    }); }));
+    /*
+    
+        const addMobDropRecipe = (name: string, tableName: string): void => {
+            api.LootModule.createLootTableModifier(tableName).addJSPostModifyCallback(json => {
+                MobDropRecipe.registerRecipe(name, json)
+            });
+            api.LootModule.forceLoad(tableName);
+        }
+    
+        addMobDropRecipe("Zombie", "entities/zombie");
+        addMobDropRecipe("Skeleton", "entities/skeleton");
+        addMobDropRecipe("Spider", "entities/spider");
+        addMobDropRecipe("Creeper", "entities/creeper");
+    
+    */
+});
 Callback.addCallback("PostLoaded", function () {
-    var x = __config__.getNumber("ButtonPosition.x").intValue();
-    var y = __config__.getNumber("ButtonPosition.y").intValue();
-    StartButton.getLocation().set(x < 0 ? 1000 - (-x) : x, y < 0 ? ScreenHeight - (-y) : y, 64, 64);
-    Threading.initThread("rv_readJson", function () {
-        //const time = Debug.sysTime();
-        //alert("[RV]: Start loading vanilla recipe Json");
-        ItemList.addVanillaItems();
-        TradingRecipe.setup();
-        if (isLegacy) {
+    ItemList.addVanillaItems();
+    TradingRecipe.setup();
+    if (isLegacy) {
+        Threading.initThread("rv_PostLoaded", function () {
             BehaviorJsonReader.readListOfJson(__packdir__ + "assets/definitions/recipe/").forEach(function (json) {
                 if (json.type === "furnace_recipe") {
                     var furnaceIn = BehaviorJsonReader.convertToItem(json.input);
@@ -1874,14 +2420,16 @@ Callback.addCallback("PostLoaded", function () {
                 }
                 else if (json.type === "crafting_shapeless") {
                     if (json.tags.some(function (tag) { return tag === "stonecutter"; })) {
-                        var stonecutterIn = { id: BehaviorJsonReader.getNumericID(json.ingredients[0].item), count: json.ingredients[0].count || 1, data: json.ingredients[0].data || 0 };
-                        var stonecutterOut = { id: BehaviorJsonReader.getNumericID(json.result.item), count: json.result.count || 1, data: json.result.data || 0 };
+                        var stonecutterIn = { id: getNumericID(json.ingredients[0].item), count: json.ingredients[0].count || 1, data: json.ingredients[0].data || 0 };
+                        var stonecutterOut = { id: getNumericID(json.result.item), count: json.result.count || 1, data: json.result.data || 0 };
                         StonecutterRecipe.registerRecipe(stonecutterIn, stonecutterOut);
                     }
                 }
             });
-        }
-        else {
+        });
+    }
+    else {
+        Threading.initThread("rv_PostLoaded", function () {
             BehaviorJsonReader.readListOfJson(__packdir__ + "assets/behavior_packs/vanilla/recipes/").forEach(function (json) {
                 if (json["minecraft:recipe_furnace"]) {
                     var recipe = json["minecraft:recipe_furnace"];
@@ -1911,23 +2459,21 @@ Callback.addCallback("PostLoaded", function () {
                 */
                 else if (json["minecraft:recipe_shapeless"]) {
                     var recipe = json["minecraft:recipe_shapeless"];
-                    var stonecutterIn = { id: BehaviorJsonReader.getNumericID(recipe.ingredients[0].item), count: recipe.ingredients[0].count || 1, data: recipe.ingredients[0].data || 0 };
-                    var stonecutterOut = { id: BehaviorJsonReader.getNumericID(recipe.result.item), count: recipe.result.count || 1, data: recipe.result.data || 0 };
+                    var stonecutterIn = { id: getNumericID(recipe.ingredients[0].item), count: recipe.ingredients[0].count || 1, data: recipe.ingredients[0].data || 0 };
+                    var stonecutterOut = { id: getNumericID(recipe.result.item), count: recipe.result.count || 1, data: recipe.result.data || 0 };
                     recipe.tags.some(function (tag) { return tag === "stonecutter"; }) && StonecutterRecipe.registerRecipe(stonecutterIn, stonecutterOut);
                 }
             });
-        }
-        //alert(`[RV]: Finish! (${Debug.sysTime() - time} ms)`);
-    });
+        });
+    }
 });
 Callback.addCallback("LevelLoaded", function () {
-    Threading.initThread("rv_setup", function () {
-        var time = Debug.sysTime();
+    joinThread("rv_PostLoaded", "[RV]: Loading vanilla recipe Jsons", "[RV]: Finish!");
+    Threading.initThread("rv_LevelLoaded", function () {
         ItemList.addModItems();
         ItemList.setup();
-        __config__.getBool("loadIcon") && ItemList.cacheIcons();
+        Cfg.loadIcon && ItemList.cacheIcons();
         SubUI.setupWindow();
-        Game.message("Recipe Viewer is ready (".concat(Debug.sysTime() - time, " ms)"));
     });
 });
 ModAPI.registerAPI("RecipeViewer", {

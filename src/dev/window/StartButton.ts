@@ -32,6 +32,13 @@ const StartButton = new UI.Window({
 StartButton.setAsGameOverlay(true);
 
 
+Callback.addCallback("PostLoaded", () => {
+    const x = Cfg.buttonX;
+    const y = Cfg.buttonY;
+    StartButton.getLocation().set(x < 0 ? 1000 - (-x): x, y < 0 ? ScreenHeight - (-y): y, 64, 64);
+});
+
+
 const InventoryScreen = {
     inventory_screen: true,
     inventory_screen_pocket: true,
