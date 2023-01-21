@@ -11,6 +11,9 @@ abstract class RecipeType {
     private readonly inputTankSize: number;
     private readonly outputTankSize: number;
 
+    private windowWidth: number;
+    private windowHeight: number;
+
     constructor(private readonly name: string, icon: Tile | number, content: {params?: UI.BindingsSet, drawing?: UI.DrawingElement[], elements: {[key: string]: Partial<UI.UIElement>}}){
 
         this.icon = typeof icon === "number" ? {id: icon, count: 1, data: 0} : {...icon, count: 1};
@@ -77,17 +80,19 @@ abstract class RecipeType {
         const locCtrler = new UI.WindowLocation({x: (1000 - ScreenHeight * 1.5) / 2, y: 0, width: ScreenHeight * 1.5, height: ScreenHeight});
 
         this.window = new UI.Window();
+        this.windowWidth = locCtrler.windowToGlobal(860);
+        this.windowHeight = ScreenHeight - locCtrler.windowToGlobal(75 + 75);
+
         this.window.setContent({
             location: {
                 x: locCtrler.x + locCtrler.windowToGlobal(120),
                 y: locCtrler.y + locCtrler.windowToGlobal(75),
-                width: locCtrler.windowToGlobal(860),
-                height: ScreenHeight - locCtrler.windowToGlobal(75 + 75)
+                width: this.windowWidth,
+                height: this.windowHeight
             },
             params: content.params,
             drawing: content.drawing,
-            //@ts-ignore
-            elements: content.elements
+            elements: content.elements as UI.UIElementSet
         });
 
         this.windows = [this.window];
@@ -105,11 +110,13 @@ abstract class RecipeType {
         let window: UI.Window;
 
         this.windows.length = 0;
+        this.windowWidth = w / col;
+        this.windowHeight = h / row;
 
         for(let c = 0; c < col; c++){
             for(let r = 0; r < row; r++){
                 window = (c === 0 && r === 0) ? this.window : new UI.Window({...content});
-                window.getLocation().set(x + w / col * c, y + h / row * r, w / col, h / row);
+                window.getLocation().set(x + this.windowWidth * c, y + this.windowHeight * r, this.windowWidth, this.windowHeight);
                 this.windows.push(window);
             }
         }
@@ -305,7 +312,11 @@ abstract class RecipeType {
     }
 
     slotTooltip(name: string, item: ItemInstance, tips: {[key: string]: any}): string {
-        return name;
+        let str = name;
+        if(name && Cfg.showId){
+            str += item.data === -1 ? `\n(#${item.id})` : `\n(#${item.id}/${item.data})`;
+        }
+        return str;
     }
 
     tankTooltip(name: string, liquid: LiquidInstance, tips: {[key: string]: any}): string {

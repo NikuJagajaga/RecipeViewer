@@ -1376,7 +1376,7 @@ declare namespace Callback {
      * @param player player actor uID
      */
     interface ItemUseFunction {
-        (coords: ItemUseCoordinates, item: ItemInstance, block: Tile, player: number): void
+        (coords: ItemUseCoordinates, item: ItemInstance, block: Tile, isExternal: boolean, player: number): void
     }
 
     /**

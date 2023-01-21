@@ -59,34 +59,76 @@ declare interface RecipeViewerOld {
 declare interface RecipeContents {
     params?: UI.BindingsSet,
     drawing?: UI.DrawingSet,
-    elements: {[key: string]: Partial<UI.UIElement>};
+    elements: {[key: string]: Partial<UI.Elements>};
 }
 declare abstract class RecipeType {
-    constructor(name: string, icon: number | Tile, content: RecipeContents);
-    setGridView(row: number, col: number, border?: boolean | number): this;
-    setDescription(text: string): this;
-    setTankLimit(limit: number): this;
+    private readonly name;
+    private readonly windows;
+    readonly window: UI.Window;
+    readonly icon: ItemInstance;
+    private description;
+    private tankLimit;
+    private readonly inputSlotSize;
+    private readonly outputSlotSize;
+    private readonly inputTankSize;
+    private readonly outputTankSize;
+    private windowWidth;
+    private windowHeight;
+    constructor(name: string, icon: Tile | number, content: {
+        params?: UI.BindingsSet;
+        drawing?: UI.DrawingElement[];
+        elements: {
+            [key: string]: Partial<UI.UIElement>;
+        };
+    });
+    setGridView(row: number, col: number, border?: boolean | number): RecipeType;
+    setDescription(text: string): RecipeType;
+    setTankLimit(limit: number): RecipeType;
+    getName(): string;
+    getIcon(): ItemInstance;
+    getDescription(): string;
+    getWindow(): UI.Window;
+    getRecipeCountPerPage(): number;
     abstract getAllList(): RecipePattern[];
     getList(id: number, data: number, isUsage: boolean): RecipePattern[];
+    getListByLiquid(liquid: string, isUsage: boolean): RecipePattern[];
+    hasAnyRecipe(id: number, data: number, isUsage: boolean): boolean;
+    hasAnyRecipeByLiquid(liquid: string, isUsage: boolean): boolean;
     onOpen(elements: java.util.HashMap<string, UI.Element>, recipe: RecipePattern): void;
-    slotTooltip(name: string, item: ItemInstance, tips: {[key: string]: any}): string;
-    tankTooltip(name: string, liquid: LiquidInstance, tips: {[key: string]: any}): string;
+    showRecipe(recipes: RecipePattern[]): void;
+    slotTooltip(name: string, item: ItemInstance, tips: {
+        [key: string]: any;
+    }): string;
+    tankTooltip(name: string, liquid: LiquidInstance, tips: {
+        [key: string]: any;
+    }): string;
 }
-declare interface RecipeTypeRegistry {
-    register(key: string, recipeType: RecipeType): void;
-    openRecipePage(key: string | string[]): void;
-    openRecipePageByItem(id: number, data: number, isUsage: boolean): boolean;
-    openRecipePageByLiquid(liquid: string, isUsage: boolean): boolean;
+declare class RecipeTypeRegistry {
+    private static readonly types;
+    static register(key: string, recipeType: RecipeType): void;
+    static get(key: string): RecipeType;
+    static isExist(key: string): boolean;
+    static delete(key: string): void;
+    static getAllKeys(): string[];
+    static getLength(): number;
+    static getActiveType(id: number, data: number, isUsage: boolean): string[];
+    static getActiveTypeByLiquid(liquid: string, isUsage: boolean): string[];
+    static openRecipePage(recipeKey: string | string[]): void;
+    static openRecipePageByItem(id: number, data: number, isUsage: boolean): boolean;
+    static openRecipePageByLiquid(liquid: string, isUsage: boolean): boolean;
+    static getLiquidByTex(texture: string): string;
 }
-declare interface ItemList {
-    get(): ItemInfo[];
-    getItemType(id: number): ItemType;
-    addToList(id: number, data: number, type?: ItemType): void;
-    addToListByData(id: number, data: number | number[], type?: ItemType): void;
-    addVanillaItems(): void;
-    addModItems(): void;
-    getName(id: number, data?: number): string;
-    setup(): void;
+declare class ItemList {
+    private static list;
+    static get(): ItemInfo[];
+    static getItemType(id: number): "block" | "item";
+    static addToList(id: number, data: number, type?: "block" | "item"): void;
+    static addToListByData(id: number, data: number | number[], type?: "block" | "item"): void;
+    static addVanillaItems(): void;
+    static addModItems(): void;
+    static getName(id: number, data?: number): string;
+    static setup(): void;
+    static cacheIcons(): void;
 }
 declare interface RecipeViewerAPI {
     Core: RecipeViewerOld;

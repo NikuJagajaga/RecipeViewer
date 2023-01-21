@@ -6,6 +6,7 @@
         "y": -70
     },
     "slotCountX": 12,
+    "showId": true,
     "preventMistap": false,
     "availableRecipes": {
         "workbench": true,

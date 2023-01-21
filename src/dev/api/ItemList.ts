@@ -5,7 +5,7 @@ class ItemList {
     private static list: ItemInfo[] = [];
 
     static get(): ItemInfo[] {
-        return this.list;
+        return this.list.filter(item => Item.isValid(item.id));
     }
 
     static getItemType(id: number): "block" | "item" {
@@ -127,9 +127,9 @@ class ItemList {
     }
 
     static setup(): void {
-        this.list = this.list.filter(item => Item.isValid(item.id, item.data)).filter(removeDuplicateFilterFunc);
-        this.list.forEach(item => {
+        this.list = this.list.filter(removeDuplicateFilterFunc).map(item => {
             item.name = this.getName(item.id, item.data);
+            return item;
         });
     }
 

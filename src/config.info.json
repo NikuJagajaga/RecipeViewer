@@ -28,58 +28,62 @@
             "min": 8,
             "max": 24
         },
+        "showId": {
+            "name": {"en": "Show Item ID"},
+            "index": 6
+        },
         "preventMistap": {
             "name": {"en": "Prevent Mistap"},
-            "index": 6
+            "index": 7
         },
         "availableList": {
             "name": {"en": "Available List of Recipes"},
             "collapsible": true,
-            "index": 7
+            "index": 8
         },
         "availableList.workbench": {
             "name": {"en": "Workbench"},
-            "index": 8
+            "index": 9
         },
         "availableList.furnace": {
             "name": {"en": "Furnace"},
-            "index": 9
+            "index": 10
         },
         "availableList.fuel": {
             "name": {"en": "Furnace Fuel"},
-            "index": 10
+            "index": 11
         },
         "availableList.blast_furnace": {
             "name": {"en": "Blast Furnace"},
-            "index": 11
+            "index": 12
         },
         "availableList.smoker": {
             "name": {"en": "Smoker"},
-            "index": 12
+            "index": 13
         },
         "availableList.campfire": {
             "name": {"en": "Campfire"},
-            "index": 13
+            "index": 14
         },
         "availableList.brewing": {
             "name": {"en": "Brewing"},
-            "index": 14
+            "index": 15
         },
         "availableList.stonecutter": {
             "name": {"en": "Stonecutter"},
-            "index": 15
+            "index": 16
         },
         "availableList.smithing": {
             "name": {"en": "Smithing"},
-            "index": 16
+            "index": 17
         },
         "availableList.trading": {
             "name": {"en": "Trading"},
-            "index": 17
+            "index": 18
         },
         "availableList.liquid_filling": {
             "name": {"en": "Liquid Filling"},
-            "index": 18
+            "index": 19
         }
     }
 }

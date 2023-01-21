@@ -11,6 +11,7 @@ const Cfg = {
 
     slotCountX: __config__.getNumber("slotCountX").intValue(),
 
+    showId: __config__.getBool("showId"),
     preventMistap: __config__.getBool("preventMistap"),
 
     $workbench: __config__.getBool("availableRecipes.workbench"),

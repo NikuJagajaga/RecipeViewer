@@ -39,7 +39,6 @@ namespace UiFuncs {
     export const genOverlayWindow = (): UI.Window => {
         const window = new UI.Window({
             location: {x: 0, y: 0, width: 1000, height: ScreenHeight},
-            drawing: [{type: "background", color: Color.TRANSPARENT}],
             elements: {
                 selectionFrame: {
                     type: "image",
@@ -76,6 +75,7 @@ namespace UiFuncs {
                 }
             }
         });
+        window.setBackgroundColor(Color.TRANSPARENT);
         window.setTouchable(false);
         window.setAsGameOverlay(true);
         window.setEventListener({
@@ -195,8 +195,14 @@ namespace UiFuncs {
     }
 
     export const onTouchSlot = (elem: UI.Element, event: {x: number, y: number, localX: number, localY: number, type: TouchEventType}): void => {
-        //elem.isDarken = event.type != "UP";
-        popupTips(elem.source.id !== 0 ? ItemList.getName(elem.source.id, elem.source.data) : "", elem, event);
+        let str = "";
+        if(elem.source.id !== 0){
+            str = ItemList.getName(elem.source.id, elem.source.data);
+            if(Cfg.showId){
+                str += elem.source.data === -1 ? `\n(#${elem.source.id})` : `\n(#${elem.source.id}/${elem.source.data})`;
+            }
+        }
+        popupTips(str, elem, event);
     }
 
     export const onTouchTank = (elem: UI.Element, event: {x: number, y: number, localX: number, localY: number, type: TouchEventType}): void => {

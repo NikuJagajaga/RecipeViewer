@@ -84,6 +84,7 @@ var Cfg = {
     buttonX: __config__.getNumber("ButtonPosition.x").intValue(),
     buttonY: __config__.getNumber("ButtonPosition.y").intValue(),
     slotCountX: __config__.getNumber("slotCountX").intValue(),
+    showId: __config__.getBool("showId"),
     preventMistap: __config__.getBool("preventMistap"),
     $workbench: __config__.getBool("availableRecipes.workbench"),
     $furnace: __config__.getBool("availableRecipes.furnace"),
@@ -102,7 +103,7 @@ var ItemList = /** @class */ (function () {
     function ItemList() {
     }
     ItemList.get = function () {
-        return this.list;
+        return this.list.filter(function (item) { return Item.isValid(item.id); });
     };
     ItemList.getItemType = function (id) {
         var info = IDRegistry.getIdInfo(id);
@@ -212,9 +213,9 @@ var ItemList = /** @class */ (function () {
     };
     ItemList.setup = function () {
         var _this = this;
-        this.list = this.list.filter(function (item) { return Item.isValid(item.id, item.data); }).filter(removeDuplicateFilterFunc);
-        this.list.forEach(function (item) {
+        this.list = this.list.filter(removeDuplicateFilterFunc).map(function (item) {
             item.name = _this.getName(item.id, item.data);
+            return item;
         });
     };
     ItemList.cacheIcons = function () {
@@ -262,7 +263,6 @@ var UiFuncs;
     UiFuncs.genOverlayWindow = function () {
         var window = new UI.Window({
             location: { x: 0, y: 0, width: 1000, height: ScreenHeight },
-            drawing: [{ type: "background", color: Color.TRANSPARENT }],
             elements: {
                 selectionFrame: {
                     type: "image",
@@ -299,6 +299,7 @@ var UiFuncs;
                 }
             }
         });
+        window.setBackgroundColor(Color.TRANSPARENT);
         window.setTouchable(false);
         window.setAsGameOverlay(true);
         window.setEventListener({
@@ -406,8 +407,14 @@ var UiFuncs;
         return frame.x !== -1000 && frame.y !== -1000;
     };
     UiFuncs.onTouchSlot = function (elem, event) {
-        //elem.isDarken = event.type != "UP";
-        UiFuncs.popupTips(elem.source.id !== 0 ? ItemList.getName(elem.source.id, elem.source.data) : "", elem, event);
+        var str = "";
+        if (elem.source.id !== 0) {
+            str = ItemList.getName(elem.source.id, elem.source.data);
+            if (Cfg.showId) {
+                str += elem.source.data === -1 ? "\n(#".concat(elem.source.id, ")") : "\n(#".concat(elem.source.id, "/").concat(elem.source.data, ")");
+            }
+        }
+        UiFuncs.popupTips(str, elem, event);
     };
     UiFuncs.onTouchTank = function (elem, event) {
         var liquid = RecipeTypeRegistry.getLiquidByTex(elem.getBinding("texture") + "");
@@ -489,16 +496,17 @@ var RecipeType = /** @class */ (function () {
         this.outputTankSize = outputTankSize;
         var locCtrler = new UI.WindowLocation({ x: (1000 - ScreenHeight * 1.5) / 2, y: 0, width: ScreenHeight * 1.5, height: ScreenHeight });
         this.window = new UI.Window();
+        this.windowWidth = locCtrler.windowToGlobal(860);
+        this.windowHeight = ScreenHeight - locCtrler.windowToGlobal(75 + 75);
         this.window.setContent({
             location: {
                 x: locCtrler.x + locCtrler.windowToGlobal(120),
                 y: locCtrler.y + locCtrler.windowToGlobal(75),
-                width: locCtrler.windowToGlobal(860),
-                height: ScreenHeight - locCtrler.windowToGlobal(75 + 75)
+                width: this.windowWidth,
+                height: this.windowHeight
             },
             params: content.params,
             drawing: content.drawing,
-            //@ts-ignore
             elements: content.elements
         });
         this.windows = [this.window];
@@ -512,10 +520,12 @@ var RecipeType = /** @class */ (function () {
         var h = (ScreenHeight - locCtrler.windowToGlobal(75 + 75));
         var window;
         this.windows.length = 0;
+        this.windowWidth = w / col;
+        this.windowHeight = h / row;
         for (var c = 0; c < col; c++) {
             for (var r = 0; r < row; r++) {
                 window = (c === 0 && r === 0) ? this.window : new UI.Window(__assign({}, content));
-                window.getLocation().set(x + w / col * c, y + h / row * r, w / col, h / row);
+                window.getLocation().set(x + this.windowWidth * c, y + this.windowHeight * r, this.windowWidth, this.windowHeight);
                 this.windows.push(window);
             }
         }
@@ -675,7 +685,11 @@ var RecipeType = /** @class */ (function () {
         }
     };
     RecipeType.prototype.slotTooltip = function (name, item, tips) {
-        return name;
+        var str = name;
+        if (name && Cfg.showId) {
+            str += item.data === -1 ? "\n(#".concat(item.id, ")") : "\n(#".concat(item.id, "/").concat(item.data, ")");
+        }
+        return str;
     };
     RecipeType.prototype.tankTooltip = function (name, liquid, tips) {
         return name;
@@ -970,11 +984,10 @@ var MainUI = /** @class */ (function () {
         this.slotsWindow = new UI.Window({
             location: location,
             params: { slot: "_default_slot_empty" },
-            drawing: [
-                { type: "background", color: UI.FrameTextureSource.get("classic_frame_slot").getCentralColor() }
-            ],
+            drawing: [],
             elements: elemSlot
         });
+        this.slotsWindow.setBackgroundColor(Color.parseColor("#8B8B8B"));
     };
     MainUI.setCloseOnBackPressed = function (val) {
         this.window.setCloseOnBackPressed(val);
@@ -1089,7 +1102,7 @@ var MainUI = /** @class */ (function () {
     MainUI.tanksWindow = (function () {
         var height = ScreenHeight - 68 - 70;
         var location = { x: 20, y: 68, width: _a.INNER_WIDTH, height: height };
-        var drawTank = [{ type: "background", color: UI.FrameTextureSource.get("classic_frame_slot").getCentralColor() }];
+        var drawTank = [];
         var elemTank = {};
         for (var i = 0; i < _a.tankCount; i++) {
             drawTank.push({
@@ -1113,11 +1126,13 @@ var MainUI = /** @class */ (function () {
                 onTouchEvent: UiFuncs.onTouchTank
             };
         }
-        return new UI.Window({
+        var window = new UI.Window({
             location: location,
             drawing: drawTank,
             elements: elemTank
         });
+        window.setBackgroundColor(Color.parseColor("#8B8B8B"));
+        return window;
     })();
     MainUI.window = (function () {
         var window = new UI.WindowGroup();
@@ -1125,7 +1140,6 @@ var MainUI = /** @class */ (function () {
         var controller = window.addWindow("controller", {
             location: { x: 0, y: 0, width: 1000, height: ScreenHeight },
             drawing: [
-                { type: "background", color: Color.TRANSPARENT },
                 { type: "frame", x: 0, y: 0, width: 1000, height: ScreenHeight, bitmap: "classic_frame_bg_light", scale: 3 },
                 { type: "frame", x: 20 - 3, y: 68 - 3, width: 960 + 6, height: ScreenHeight - 68 - 70 + 6, bitmap: "classic_frame_slot", scale: 3 },
                 { type: "frame", x: 20, y: ScreenHeight - 60, width: 230, height: 50, bitmap: "classic_frame_bg_light", scale: 1 },
@@ -1233,6 +1247,7 @@ var MainUI = /** @class */ (function () {
         window.setContainer(new UI.Container());
         window.setBlockingBackground(true);
         window.setCloseOnBackPressed(true);
+        controller.setBackgroundColor(Color.TRANSPARENT);
         controller.setEventListener({
             onOpen: function () {
                 StartButton.close();
@@ -1534,6 +1549,7 @@ var SubUI = /** @class */ (function () {
         window.setContainer(new UI.Container());
         window.setBlockingBackground(true);
         window.setCloseOnBackPressed(true);
+        controller.setBackgroundColor(Color.TRANSPARENT);
         controller.setEventListener({
             onOpen: function () {
                 MainUI.isOpened() && MainUI.setCloseOnBackPressed(false);
@@ -2482,3 +2498,17 @@ ModAPI.registerAPI("RecipeViewer", {
     RecipeType: RecipeType,
     RecipeTypeRegistry: RecipeTypeRegistry
 });
+/*
+Callback.addCallback("ItemUse", (coords, item, block, isExternal, player) => {
+    const client = Network.getClientForPlayer(player);
+    if(client){
+        client.send("rv_test", {id: item.id, data: item.data});
+    }
+});
+
+
+Network.addClientPacket("rv_test", item => {
+    const localId = Network.serverToLocalId(item.id);
+    Game.message(item.id + " -> " + localId + " : " + Item.isValid(item.id) + "-> " + Item.isValid(localId));
+});
+*/ 

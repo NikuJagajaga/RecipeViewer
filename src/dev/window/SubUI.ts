@@ -143,6 +143,8 @@ class SubUI {
         window.setBlockingBackground(true);
         window.setCloseOnBackPressed(true);
 
+        controller.setBackgroundColor(Color.TRANSPARENT);
+
         controller.setEventListener({
             onOpen: () => {
                 MainUI.isOpened() && MainUI.setCloseOnBackPressed(false);

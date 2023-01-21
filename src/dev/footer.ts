@@ -86,3 +86,18 @@ ModAPI.registerAPI("RecipeViewer", {
     RecipeType: RecipeType,
     RecipeTypeRegistry: RecipeTypeRegistry
 });
+
+/*
+Callback.addCallback("ItemUse", (coords, item, block, isExternal, player) => {
+    const client = Network.getClientForPlayer(player);
+    if(client){
+        client.send("rv_test", {id: item.id, data: item.data});
+    }
+});
+
+
+Network.addClientPacket("rv_test", item => {
+    const localId = Network.serverToLocalId(item.id);
+    Game.message(item.id + " -> " + localId + " : " + Item.isValid(item.id) + "-> " + Item.isValid(localId));
+});
+*/

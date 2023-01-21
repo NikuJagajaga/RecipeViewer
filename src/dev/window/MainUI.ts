@@ -90,11 +90,11 @@ class MainUI {
         this.slotsWindow = new UI.Window({
             location: location,
             params: {slot: "_default_slot_empty"},
-            drawing: [
-                {type: "background", color: UI.FrameTextureSource.get("classic_frame_slot").getCentralColor()}
-            ],
+            drawing: [],
             elements: elemSlot
         });
+
+        this.slotsWindow.setBackgroundColor(Color.parseColor("#8B8B8B"));
 
     }
 
@@ -105,7 +105,7 @@ class MainUI {
 
         const height = ScreenHeight - 68 - 70;
         const location: UI.WindowLocationParams = {x: 20, y: 68, width: this.INNER_WIDTH, height: height};
-        const drawTank: UI.DrawingElement[] = [{type: "background", color: UI.FrameTextureSource.get("classic_frame_slot").getCentralColor()}];
+        const drawTank: UI.DrawingElement[] = [];
         const elemTank: UI.UIElementSet = {};
 
         for(let i = 0; i < this.tankCount; i++){
@@ -131,11 +131,15 @@ class MainUI {
             };
         }
 
-        return new UI.Window({
+        const window = new UI.Window({
             location: location,
             drawing: drawTank,
             elements: elemTank
-        });
+        })
+
+        window.setBackgroundColor(Color.parseColor("#8B8B8B"));
+
+        return window;
 
     })();
 
@@ -148,7 +152,6 @@ class MainUI {
         const controller = window.addWindow("controller", {
             location: {x: 0, y: 0, width: 1000, height: ScreenHeight},
             drawing: [
-                {type: "background", color: Color.TRANSPARENT},
                 {type: "frame", x: 0, y: 0, width: 1000, height: ScreenHeight, bitmap: "classic_frame_bg_light", scale: 3},
                 {type: "frame", x: 20 - 3, y: 68 - 3, width: 960 + 6, height: ScreenHeight - 68 - 70 + 6, bitmap: "classic_frame_slot", scale: 3},
                 {type: "frame", x: 20, y: ScreenHeight - 60, width: 230, height: 50, bitmap: "classic_frame_bg_light", scale: 1},
@@ -257,6 +260,8 @@ class MainUI {
         window.setContainer(new UI.Container());
         window.setBlockingBackground(true);
         window.setCloseOnBackPressed(true);
+
+        controller.setBackgroundColor(Color.TRANSPARENT);
 
         controller.setEventListener({
             onOpen: () => {
