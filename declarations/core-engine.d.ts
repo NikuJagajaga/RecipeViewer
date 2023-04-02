@@ -9451,6 +9451,7 @@ declare namespace UI {
      class Window implements IWindow {
 
         equals: (val: any) => boolean;
+        forceRefresh: () => void;
 
         layout: android.view.ViewGroup;
         getContentProvider: () => any;
@@ -10796,6 +10797,7 @@ declare namespace UI {
         x: number;
         y: number;
         z: number;
+        size?: java.lang.Integer;
         source?: ItemInstance;
         elementRect: android.graphics.Rect;
         isTouched: boolean;

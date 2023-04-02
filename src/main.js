@@ -938,8 +938,8 @@ Callback.addCallback("NativeGuiChanged", function (screen) {
 var MainUI = /** @class */ (function () {
     function MainUI() {
     }
-    MainUI.calcSlotCountY = function () {
-        var slotSize = this.INNER_WIDTH / this.slotCountX;
+    MainUI.calcSlotCountY = function (slotCountX) {
+        var slotSize = this.INNER_WIDTH / slotCountX;
         var count = 0;
         while (68 + slotSize * count <= ScreenHeight - 70) {
             count++;
@@ -947,47 +947,76 @@ var MainUI = /** @class */ (function () {
         return count - 1;
     };
     MainUI.setSlotCount = function (x) {
-        var x2 = Math.min(Math.max(x, this.slotCountXLimit.min), this.slotCountXLimit.max);
+        var x2 = Math.min(Math.max(x, this.SLOT_X_MIN), this.SLOT_X_MAX);
         if (this.slotCountX === x2) {
             return false;
         }
         this.slotCountX = x2;
-        this.slotCountY = this.calcSlotCountY();
+        this.slotCountY = this.calcSlotCountY(this.slotCountX);
         this.slotCount = this.slotCountX * this.slotCountY;
-        Cfg.set("slotCountX", x2);
         return true;
     };
-    MainUI.changeSlotXCount = function (val) {
-        if (!this.liquidMode) {
-            if (this.setSlotCount(this.slotCountX + val)) {
-                this.refreshSlotsWindow();
-                this.switchWindow(false, true);
-            }
+    MainUI.changeSlotXCount = function (val, force) {
+        if (this.liquidMode) {
+            return;
+        }
+        if (this.setSlotCount(val) || force) {
+            var elements = this.window.getElements();
+            var diff = this.SLOT_X_MAX - this.SLOT_X_MIN;
+            elements.get("textZoom").setBinding("text", this.slotCountX + "");
+            elements.get("scrollZoom").setBinding("raw-value", java.lang.Float.valueOf((this.SLOT_X_MAX - this.slotCountX) / diff));
+            this.page = 0;
+            this.refreshSlotsWindow();
+            this.updateWindow();
         }
     };
-    MainUI.refreshSlotsWindow = function () {
-        var height = this.slotCountY * (this.INNER_WIDTH / this.slotCountX);
-        var location = { x: 20, y: 68, width: this.INNER_WIDTH, height: height };
-        var slotSize = 1000 / this.slotCountX;
-        var elemSlot = {};
-        for (var i = 0; i < this.slotCount; i++) {
-            elemSlot["slot" + i] = {
-                type: "slot",
-                x: (i % this.slotCountX) * slotSize,
-                y: (i / this.slotCountX | 0) * slotSize,
-                size: slotSize,
-                visual: true,
-                clicker: UiFuncs.slotClicker,
-                onTouchEvent: UiFuncs.onTouchSlot
-            };
+    /*
+        private static refreshSlotsWindow_old(): void {
+    
+            const height = this.slotCountY * (this.INNER_WIDTH / this.slotCountX);
+            const location: UI.WindowLocationParams = {x: 20, y: 68, width: this.INNER_WIDTH, height: height};
+            const slotSize = 1000 / this.slotCountX;
+            const elemSlot: UI.UIElementSet = {};
+    
+            for(let i = 0; i < this.slotCount; i++){
+                elemSlot["slot" + i] = {
+                    type: "slot",
+                    x: (i % this.slotCountX) * slotSize,
+                    y: (i / this.slotCountX | 0) * slotSize,
+                    size: slotSize,
+                    visual: true,
+                    clicker: UiFuncs.slotClicker,
+                    onTouchEvent: UiFuncs.onTouchSlot
+                };
+            }
+    
+            this.slotsWindow = new UI.Window({
+                location: location,
+                params: {slot: "_default_slot_empty"},
+                drawing: [],
+                elements: elemSlot
+            });
+    
+            this.slotsWindow.setBackgroundColor(Color.parseColor("#8B8B8B"));
+    
         }
-        this.slotsWindow = new UI.Window({
-            location: location,
-            params: { slot: "_default_slot_empty" },
-            drawing: [],
-            elements: elemSlot
-        });
-        this.slotsWindow.setBackgroundColor(Color.parseColor("#8B8B8B"));
+    */
+    MainUI.refreshSlotsWindow = function () {
+        var slotSize = 1000 / this.slotCountX;
+        var elements = this.slotsWindow.getElements();
+        var empty = { id: 0, count: 0, data: 0 };
+        var elem;
+        for (var i = 0; i < this.SLOT_MAX; i++) {
+            elem = elements.get("slot" + i);
+            elem.setBinding("source", empty);
+            if (i < this.slotCount) {
+                elem.size = java.lang.Integer.valueOf(slotSize);
+                elem.setSize(slotSize, slotSize);
+                elem.setPosition((i % this.slotCountX) * slotSize, (i / this.slotCountX | 0) * slotSize);
+                continue;
+            }
+            elem.setPosition(-1000, -1000);
+        }
     };
     MainUI.setCloseOnBackPressed = function (val) {
         this.window.setCloseOnBackPressed(val);
@@ -1065,10 +1094,14 @@ var MainUI = /** @class */ (function () {
         this.window.open();
         this.changeSortMode(true);
         this.switchWindow(false, true);
+        this.changeSlotXCount(this.slotCountX, true);
     };
     var _a;
     _a = MainUI;
     MainUI.INNER_WIDTH = 960;
+    MainUI.SLOT_X_MIN = 8;
+    MainUI.SLOT_X_MAX = 24;
+    MainUI.SLOT_MAX = _a.SLOT_X_MAX * _a.calcSlotCountY(_a.SLOT_X_MAX);
     MainUI.page = 0;
     MainUI.list = [];
     MainUI.liquidMode = false;
@@ -1094,11 +1127,34 @@ var MainUI = /** @class */ (function () {
             return a.name > b.name ? 1 : -1;
         }
     };
-    MainUI.slotCountXLimit = { min: 8, max: 24 };
-    MainUI.slotCountX = 0;
-    MainUI.slotCountY = _a.calcSlotCountY();
+    MainUI.slotCountX = Cfg.slotCountX;
+    MainUI.slotCountY = _a.calcSlotCountY(_a.slotCountX);
     MainUI.slotCount = _a.slotCountX * _a.slotCountY;
     MainUI.tankCount = 8;
+    MainUI.slotsWindow = (function () {
+        var height = ScreenHeight - 68 - 70;
+        var location = { x: 20, y: 68, width: _a.INNER_WIDTH, height: height };
+        var slotSize = 1000 / _a.SLOT_X_MAX;
+        var elemSlot = {};
+        for (var i = 0; i < _a.SLOT_MAX; i++) {
+            elemSlot["slot" + i] = {
+                type: "slot",
+                x: (i % _a.SLOT_X_MAX) * slotSize,
+                y: (i / _a.SLOT_X_MAX | 0) * slotSize,
+                size: slotSize,
+                visual: true,
+                clicker: UiFuncs.slotClicker,
+                onTouchEvent: UiFuncs.onTouchSlot
+            };
+        }
+        var window = new UI.Window({
+            location: location,
+            params: { slot: "_default_slot_empty" },
+            elements: elemSlot
+        });
+        window.setBackgroundColor(Color.parseColor("#8B8B8B"));
+        return window;
+    })();
     MainUI.tanksWindow = (function () {
         var height = ScreenHeight - 68 - 70;
         var location = { x: 20, y: 68, width: _a.INNER_WIDTH, height: height };
@@ -1136,13 +1192,13 @@ var MainUI = /** @class */ (function () {
     })();
     MainUI.window = (function () {
         var window = new UI.WindowGroup();
-        var slotSize = 960 / _a.slotCountX;
         var controller = window.addWindow("controller", {
             location: { x: 0, y: 0, width: 1000, height: ScreenHeight },
             drawing: [
                 { type: "frame", x: 0, y: 0, width: 1000, height: ScreenHeight, bitmap: "classic_frame_bg_light", scale: 3 },
                 { type: "frame", x: 20 - 3, y: 68 - 3, width: 960 + 6, height: ScreenHeight - 68 - 70 + 6, bitmap: "classic_frame_slot", scale: 3 },
                 { type: "frame", x: 20, y: ScreenHeight - 60, width: 230, height: 50, bitmap: "classic_frame_bg_light", scale: 1 },
+                { type: "line", x1: 740, y1: 40, x2: 900, y2: 40, width: 4, color: Color.DKGRAY },
                 { type: "text", x: 40, y: ScreenHeight - 27, text: "Item", font: { size: 20 } },
                 { type: "text", x: 160, y: ScreenHeight - 27, text: "Liquid", font: { size: 20 } }
             ],
@@ -1201,20 +1257,48 @@ var MainUI = /** @class */ (function () {
                     text: "",
                     font: { color: Color.WHITE, size: 16, shadow: 0.5 }
                 },
-                buttonPlus: { type: "button", x: 800, y: 25, bitmap: "rv.button_plus", bitmap2: "rv.button_plus_pressed", scale: 2, clicker: {
+                scrollZoom: {
+                    type: "scroll",
+                    x: 740, y: 30,
+                    length: 160 - 20, width: 20,
+                    bitmapHandle: "rv.handle_zoom", bitmapHandleHover: "rv.handle_zoom",
+                    bitmapBg: "_default_slot_empty", bitmapBgHover: "_default_slot_empty",
+                    onTouchEvent: function (elem, event) {
+                        var diff = _a.SLOT_X_MAX - _a.SLOT_X_MIN;
+                        var page = Math.round(event.localX * diff);
+                        var zoom = _a.SLOT_X_MAX - page;
+                        if (_a.liquidMode) {
+                            event.localX = (_a.SLOT_X_MAX - _a.slotCountX) / diff;
+                            return;
+                        }
+                        event.localX = page / diff;
+                        elem.window.getElements().get("textZoom").setBinding("text", zoom + "");
+                        _a.changeSlotXCount(zoom);
+                    }
+                },
+                textZoom: { type: "text", x: 820, y: 8, font: { color: Color.DKGRAY, size: 12, align: UI.Font.ALIGN_CENTER } },
+                buttonMinus: { type: "button", x: 710, y: 30, bitmap: "rv.button_minus", bitmap2: "rv.button_minus_pressed", scale: 1.5, clicker: {
                         onClick: function () {
-                            _a.changeSlotXCount(-1);
+                            if (!_a.liquidMode) {
+                                _a.changeSlotXCount(_a.slotCountX + 1);
+                            }
                         }
                     } },
-                buttonMinus: { type: "button", x: 850, y: 25, bitmap: "rv.button_minus", bitmap2: "rv.button_minus_pressed", scale: 2, clicker: {
+                buttonPlus: { type: "button", x: 910, y: 30, bitmap: "rv.button_plus", bitmap2: "rv.button_plus_pressed", scale: 1.5, clicker: {
                         onClick: function () {
-                            _a.changeSlotXCount(1);
+                            if (!_a.liquidMode) {
+                                _a.changeSlotXCount(_a.slotCountX - 1);
+                            }
                         }
                     } },
-                switchMode: { type: "switch", x: 93, y: ScreenHeight - 50, scale: 2, onNewState: function (state, container, elem) {
+                switchMode: {
+                    type: "switch",
+                    x: 93, y: ScreenHeight - 50, scale: 2,
+                    onNewState: function (state, container, elem) {
                         World.isWorldLoaded() && _a.switchWindow(!!state);
                         //elem.texture = new UI.Texture(UI.TextureSource.get("default_switch" + (state ? "on" : "off")));
-                    } },
+                    }
+                },
                 buttonPrev: {
                     type: "button",
                     x: 520, y: ScreenHeight - 60, scale: 2,
@@ -1249,10 +1333,12 @@ var MainUI = /** @class */ (function () {
         window.setCloseOnBackPressed(true);
         controller.setBackgroundColor(Color.TRANSPARENT);
         controller.setEventListener({
-            onOpen: function () {
+            onOpen: function (window) {
                 StartButton.close();
             },
-            onClose: function () {
+            onClose: function (window) {
+                _a.liquidMode = false;
+                Cfg.set("slotCountX", _a.slotCountX);
                 StartButton.open();
             }
         });
