@@ -431,7 +431,7 @@ var UiFuncs;
             while (window.isOpened() && step <= 3) {
                 step & 1 ? text.setPosition(-1000, -1000) : text.setPosition(x, y);
                 step++;
-                java.lang.Thread.sleep(200);
+                java.lang.Thread.sleep(100);
             }
         });
     };
@@ -1525,7 +1525,7 @@ var SubUI = /** @class */ (function () {
         this.page = page < 0 ? maxPage - 1 : page >= maxPage ? 0 : page;
         elements.get("scrollPage").setBinding("raw-value", java.lang.Float.valueOf(this.page / (maxPage - 1)));
         elements.get("textPage").setBinding("text", (this.page + 1) + " / " + maxPage);
-        elements.get("textPage").setPosition(300 + (this.page < maxPage / 2 ? 400 : 100), 590);
+        elements.get("textPage").setPosition(550 + (this.page < maxPage / 2 ? 150 : -150), 595);
         recipeType.showRecipe(this.list.slice(this.page * recsPerPage, this.page * recsPerPage + recsPerPage));
     };
     var _a;
@@ -1628,7 +1628,7 @@ var SubUI = /** @class */ (function () {
                         event.localX = page / maxPage;
                     }
                 },
-                textPage: { type: "text", x: 300 + 400, y: 590, font: { size: 32, align: UI.Font.ALIGN_CENTER } }
+                textPage: { type: "text", x: 550, y: 595, font: { size: 24, align: UI.Font.ALIGN_CENTER } }
             }
         });
         window.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
@@ -2569,7 +2569,7 @@ Callback.addCallback("PostLoaded", function () {
         });
     }
 });
-Callback.addCallback("LevelLoaded", function () {
+Callback.addCallback("LocalLevelLoaded", function () {
     joinThread("rv_PostLoaded", "[RV]: Loading vanilla recipe Jsons", "[RV]: Finish!");
     Threading.initThread("rv_LevelLoaded", function () {
         ItemList.addModItems();

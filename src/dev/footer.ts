@@ -69,7 +69,7 @@ Callback.addCallback("PostLoaded", () => {
 });
 
 
-Callback.addCallback("LevelLoaded", () => {
+Callback.addCallback("LocalLevelLoaded", () => {
     joinThread("rv_PostLoaded", "[RV]: Loading vanilla recipe Jsons", "[RV]: Finish!");
     Threading.initThread("rv_LevelLoaded", () => {
         ItemList.addModItems();

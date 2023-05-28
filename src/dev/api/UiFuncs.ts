@@ -221,7 +221,7 @@ namespace UiFuncs {
             while(window.isOpened() && step <= 3){
                 step & 1 ? text.setPosition(-1000, -1000) : text.setPosition(x, y);
                 step++;
-                java.lang.Thread.sleep(200);
+                java.lang.Thread.sleep(100);
             }
         });
     }
