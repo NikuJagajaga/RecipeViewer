@@ -33,6 +33,7 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+IMPORT("BlockEngine", "LiquidItemRegistry");
 IMPORT("BehaviorJsonReader");
 var Color = android.graphics.Color;
 var ScreenHeight = UI.getScreenHeight();
@@ -2186,6 +2187,16 @@ var LiquidFillingRecipe = /** @class */ (function (_super) {
                 input: [{ id: empty.id, count: 1, data: empty.data }],
                 output: [{ id: +full[0], count: 1, data: +full[1] }],
                 inputLiq: [{ liquid: empty.liquid, amount: 1000 }]
+            });
+        }
+        for (var key in LiquidItemRegistry.EmptyByFull) {
+            if (!!LiquidRegistry.getEmptyItem(+key, 0))
+                continue;
+            empty = LiquidItemRegistry.EmptyByFull[key];
+            list.push({
+                input: [{ id: empty.id, count: 1, data: empty.data }],
+                output: [{ id: +key, count: 1, data: 0 }],
+                inputLiq: [{ liquid: empty.liquid, amount: empty.storage || 1000 }]
             });
         }
         return list;

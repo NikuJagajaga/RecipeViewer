@@ -46,6 +46,7 @@
         "../../declarations/android.d.ts",
         "../../declarations/core-engine.d.ts",
         "../../declarations/kex.d.ts",
+        "../../declarations/BlockEngine.d.ts",
         "../../declarations/BehaviorJsonReader.d.ts"
     ]
 }

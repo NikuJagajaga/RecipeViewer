@@ -1,3 +1,4 @@
+IMPORT("BlockEngine", "LiquidItemRegistry");
 IMPORT("BehaviorJsonReader");
 
 

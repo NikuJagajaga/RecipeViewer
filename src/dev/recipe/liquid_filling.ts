@@ -19,9 +19,11 @@ class LiquidFillingRecipe extends RecipeType {
     }
 
     getAllList(): RecipePattern[] {
+
         const list: RecipePattern[] = [];
-        let empty: {id: number, data: number, liquid: string};
+        let empty: {id: number, data: number, liquid: string, storage?: number};
         let full: string[];
+
         for(let key in LiquidRegistry.EmptyByFull){
             empty = LiquidRegistry.EmptyByFull[key];
             full = key.split(":");
@@ -31,7 +33,19 @@ class LiquidFillingRecipe extends RecipeType {
                 inputLiq: [{liquid: empty.liquid, amount: 1000}]
             });
         }
+
+        for(let key in LiquidItemRegistry.EmptyByFull){
+            if(!!LiquidRegistry.getEmptyItem(+key, 0)) continue;
+            empty = LiquidItemRegistry.EmptyByFull[key];
+            list.push({
+                input: [{id: empty.id, count: 1, data: empty.data}],
+                output: [{id: +key, count: 1, data: 0}],
+                inputLiq: [{liquid: empty.liquid, amount: empty.storage || 1000}]
+            });
+        }
+
         return list;
+
     }
 
 }
