@@ -481,12 +481,12 @@ var RecipeType = /** @class */ (function () {
             isInputSlot = key.startsWith("input") && !isInputTank;
             isOutputSlot = key.startsWith("output") && !isOutputTank;
             if (isInputSlot || isOutputSlot) {
-                content.elements[key] = __assign(__assign({}, templateSlot), content.elements[key]);
+                content.elements[key] = __assign(__assign({}, content.elements[key]), templateSlot);
                 isInputSlot && inputSlotSize++;
                 isOutputSlot && outputSlotSize++;
             }
             if (isInputTank || isOutputTank) {
-                content.elements[key] = __assign(__assign({}, templateTank), content.elements[key]);
+                content.elements[key] = __assign(__assign({}, content.elements[key]), templateTank);
                 isInputTank && inputTankSize++;
                 isOutputTank && outputTankSize++;
             }

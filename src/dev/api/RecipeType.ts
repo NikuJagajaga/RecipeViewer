@@ -61,12 +61,12 @@ abstract class RecipeType {
             isInputSlot = key.startsWith("input") && !isInputTank;
             isOutputSlot = key.startsWith("output") && !isOutputTank;
             if(isInputSlot || isOutputSlot){
-                content.elements[key] = {...templateSlot, ...content.elements[key]};
+                content.elements[key] = {...content.elements[key], ...templateSlot};
                 isInputSlot && inputSlotSize++;
                 isOutputSlot && outputSlotSize++;
             }
             if(isInputTank || isOutputTank){
-                content.elements[key] = {...templateTank, ...content.elements[key]};
+                content.elements[key] = {...content.elements[key], ...templateTank};
                 isInputTank && inputTankSize++;
                 isOutputTank && outputTankSize++;
             }
