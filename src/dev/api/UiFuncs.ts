@@ -1,12 +1,8 @@
-const McFontPaint: android.graphics.Paint = (() => {
-    const paint = new android.graphics.Paint();
-    paint.setTypeface(WRAP_JAVA("com.zhekasmirnov.innercore.utils.FileTools").getMcTypeface());
-    paint.setTextSize(16);
-    return paint;
-})();
-
-
 namespace UiFuncs {
+
+    const Bitmap = android.graphics.Bitmap;
+    const Canvas = android.graphics.Canvas;
+    const tooltipsFont = new UI.Font({color: Color.WHITE, size: 16, shadow: 0.5});
 
     export const slotClicker: UI.UIClickEvent = {
         onClick: (container, tile, elem) => {
@@ -63,7 +59,7 @@ namespace UiFuncs {
                     x: -1000,
                     y: -1000,
                     z: 1,
-                    font: {color: Color.WHITE, size: 16, shadow: 0.5},
+                    font: tooltipsFont.asScriptable(),
                     multiline: true
                 },
                 notFound: {
@@ -125,10 +121,10 @@ namespace UiFuncs {
     const FrameTexCentralColor = FrameTex.getCentralColor();
 
     const createRect = (w: number, h: number): android.graphics.Bitmap => {
-        const bitmap = new android.graphics.Bitmap.createBitmap(w | 0, h | 0, android.graphics.Bitmap.Config.ARGB_8888);
-        const canvas = new android.graphics.Canvas(bitmap);
+        const bitmap = new Bitmap.createBitmap(w | 0, h | 0, Bitmap.Config.ARGB_8888);
+        const canvas = new Canvas(bitmap);
         canvas.drawARGB(127, 255, 255, 255);
-        return bitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, true);
+        return bitmap.copy(Bitmap.Config.ARGB_8888, true);
     }
 
     export const popupTips = (str: string, elem: UI.Element, event: {x: number, y: number, localX: number, localY: number, type: TouchEventType}): void => {
@@ -149,13 +145,14 @@ namespace UiFuncs {
             w = location.windowToGlobal(elem.elementRect.width()) | 0;
             h = location.windowToGlobal(elem.elementRect.height()) | 0;
             if(selection.elementRect.width() !== w || selection.elementRect.height() !== h){
+                selection.texture?.release();
                 selection.texture = new UI.Texture(createRect(w, h));
                 selection.setSize(w, h);
             }
             selection.setPosition(x, y);
 
             const split = str.split("\n");
-            w = Math.max(...split.map(s => McFontPaint.measureText(s))) + 20;
+            w = Math.max(...split.map(s => tooltipsFont.getTextWidth(s, 1))) + 20;
             h = split.length * 18 + 16;
             x = location.x + location.windowToGlobal(event.x);
             y = location.y + location.windowToGlobal(event.y) - h - 50;
@@ -163,6 +160,7 @@ namespace UiFuncs {
                 y = location.y + location.windowToGlobal(event.y) + 70;
             }
             if(frame.elementRect.width() !== w || frame.elementRect.height() !== h){
+                frame.texture?.release();
                 frame.texture = new UI.Texture(FrameTex.expandAndScale(w, h, 1, FrameTexCentralColor));
                 frame.setSize(w, h);
             }

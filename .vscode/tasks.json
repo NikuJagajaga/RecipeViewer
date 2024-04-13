@@ -8,21 +8,15 @@
             "problemMatcher": [
                 "$tsc"
             ],
-            "group": "build",
+            "group": "build"
         },
         {
-            "label": "Push All",
+            "label": "Compile & Push All",
             "type": "shell",
-            "command": "adb push '${workspaceFolder}/src/.' '/storage/emulated/0/games/horizon/packs/Inner_Core/innercore/mods/${workspaceFolderBasename}/.'",
+            "command": "adb push src/. '/storage/emulated/0/games/horizon/packs/Inner_Core/innercore/mods/${workspaceFolderBasename}'",
             "group": "build",
-            "problemMatcher": []
-        },
-        {
-            "label": "Push Code",
-            "type": "shell",
-            "command": "adb push '${workspaceFolder}/src/main.js' '/storage/emulated/0/games/horizon/packs/Inner_Core/innercore/mods/${workspaceFolderBasename}/main.js'",
-            "group": "build",
-            "problemMatcher": []
+            "dependsOrder": "sequence",
+            "dependsOn": ["Compile"]
         }
     ]
 }

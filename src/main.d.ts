@@ -72,7 +72,6 @@ declare class ItemList {
     static setup(): void;
     static cacheIcons(): void;
 }
-declare const McFontPaint: android.graphics.Paint;
 declare namespace UiFuncs {
     const slotClicker: UI.UIClickEvent;
     const tankClicker: UI.UIClickEvent;

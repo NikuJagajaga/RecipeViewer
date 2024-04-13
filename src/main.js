@@ -100,7 +100,7 @@ var Cfg = {
     $liquid_filling: __config__.getBool("availableRecipes.liquid_filling")
 };
 var ItemIconSource = WRAP_JAVA("com.zhekasmirnov.innercore.api.mod.ui.icon.ItemIconSource").instance;
-var ItemList = /** @class */ (function () {
+var ItemList = (function () {
     function ItemList() {
     }
     ItemList.get = function () {
@@ -188,12 +188,6 @@ var ItemList = /** @class */ (function () {
         }
     };
     ItemList.getName = function (id, data) {
-        /*
-        const find = this.list.find(item => item.id === id && item.data === data);
-        if(find && find.name){
-            return find.name;
-        }
-        */
         var name = "";
         try {
             name = Item.getName(id, data === -1 ? 0 : data);
@@ -227,14 +221,9 @@ var ItemList = /** @class */ (function () {
     ItemList.list = [];
     return ItemList;
 }());
-var McFontPaint = (function () {
-    var paint = new android.graphics.Paint();
-    paint.setTypeface(WRAP_JAVA("com.zhekasmirnov.innercore.utils.FileTools").getMcTypeface());
-    paint.setTextSize(16);
-    return paint;
-})();
 var UiFuncs;
 (function (UiFuncs) {
+    var tooltipsFont = new UI.Font({ color: Color.WHITE, size: 16, shadow: 0.5 });
     UiFuncs.slotClicker = {
         onClick: function (container, tile, elem) {
             var source = elem.getBinding("source");
@@ -288,7 +277,7 @@ var UiFuncs;
                     x: -1000,
                     y: -1000,
                     z: 1,
-                    font: { color: Color.WHITE, size: 16, shadow: 0.5 },
+                    font: tooltipsFont.asScriptable(),
                     multiline: true
                 },
                 notFound: {
@@ -340,7 +329,7 @@ var UiFuncs;
         if ("addWindow" in win) {
             return win;
         }
-        return win.getParentWindow(); //adjacent
+        return win.getParentWindow();
     };
     var FrameTex = UI.FrameTextureSource.get("workbench_frame3");
     var FrameTexCentralColor = FrameTex.getCentralColor();
@@ -351,6 +340,7 @@ var UiFuncs;
         return bitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, true);
     };
     UiFuncs.popupTips = function (str, elem, event) {
+        var _a, _b;
         var location = elem.window.getLocation();
         var elements = getWindowGroup(elem).getElements();
         var selection = elements.get("selectionFrame");
@@ -367,12 +357,13 @@ var UiFuncs;
             w = location.windowToGlobal(elem.elementRect.width()) | 0;
             h = location.windowToGlobal(elem.elementRect.height()) | 0;
             if (selection.elementRect.width() !== w || selection.elementRect.height() !== h) {
+                (_a = selection.texture) === null || _a === void 0 ? void 0 : _a.release();
                 selection.texture = new UI.Texture(createRect(w, h));
                 selection.setSize(w, h);
             }
             selection.setPosition(x, y);
             var split = str.split("\n");
-            w = Math.max.apply(Math, split.map(function (s) { return McFontPaint.measureText(s); })) + 20;
+            w = Math.max.apply(Math, split.map(function (s) { return tooltipsFont.getTextWidth(s, 1); })) + 20;
             h = split.length * 18 + 16;
             x = location.x + location.windowToGlobal(event.x);
             y = location.y + location.windowToGlobal(event.y) - h - 50;
@@ -380,6 +371,7 @@ var UiFuncs;
                 y = location.y + location.windowToGlobal(event.y) + 70;
             }
             if (frame.elementRect.width() !== w || frame.elementRect.height() !== h) {
+                (_b = frame.texture) === null || _b === void 0 ? void 0 : _b.release();
                 frame.texture = new UI.Texture(FrameTex.expandAndScale(w, h, 1, FrameTexCentralColor));
                 frame.setSize(w, h);
             }
@@ -437,7 +429,7 @@ var UiFuncs;
         });
     };
 })(UiFuncs || (UiFuncs = {}));
-var RecipeType = /** @class */ (function () {
+var RecipeType = (function () {
     function RecipeType(name, icon, content) {
         var _this = this;
         this.name = name;
@@ -512,7 +504,7 @@ var RecipeType = /** @class */ (function () {
         });
         this.windows = [this.window];
     }
-    RecipeType.prototype.setGridView = function (row, col, border /*Color*/) {
+    RecipeType.prototype.setGridView = function (row, col, border) {
         var content = this.window.getContent();
         var locCtrler = new UI.WindowLocation({ x: (1000 - ScreenHeight * 1.5) / 2, y: 0, width: ScreenHeight * 1.5, height: ScreenHeight });
         var x = locCtrler.x + locCtrler.windowToGlobal(120);
@@ -559,13 +551,6 @@ var RecipeType = /** @class */ (function () {
         }
         return this;
     };
-    /*
-        setParentWindow(window: UI.WindowGroup): void {
-            for(let i = 0; i < this.windows.length; i++){
-                this.windows[i].setParentWindow(window);
-            }
-        }
-    */
     RecipeType.prototype.setDescription = function (text) {
         this.description = text;
         return this;
@@ -697,7 +682,7 @@ var RecipeType = /** @class */ (function () {
     };
     return RecipeType;
 }());
-var RecipeTypeRegistry = /** @class */ (function () {
+var RecipeTypeRegistry = (function () {
     function RecipeTypeRegistry() {
     }
     RecipeTypeRegistry.register = function (key, recipeType) {
@@ -766,7 +751,7 @@ var RecipeTypeRegistry = /** @class */ (function () {
     RecipeTypeRegistry.types = {};
     return RecipeTypeRegistry;
 }());
-var OldRecipeType = /** @class */ (function (_super) {
+var OldRecipeType = (function (_super) {
     __extends(OldRecipeType, _super);
     function OldRecipeType(obj) {
         var _this = _super.call(this, obj.title || "", obj.contents.icon, {
@@ -802,7 +787,7 @@ var OldRecipeType = /** @class */ (function (_super) {
     };
     return OldRecipeType;
 }(RecipeType));
-var OldVersion = /** @class */ (function () {
+var OldVersion = (function () {
     function OldVersion() {
     }
     OldVersion.registerRecipeType = function (key, obj) {
@@ -936,7 +921,7 @@ var InventoryScreen = {
 Callback.addCallback("NativeGuiChanged", function (screen) {
     InventoryScreen[screen] ? StartButton.open() : StartButton.close();
 });
-var MainUI = /** @class */ (function () {
+var MainUI = (function () {
     function MainUI() {
     }
     MainUI.calcSlotCountY = function (slotCountX) {
@@ -971,37 +956,6 @@ var MainUI = /** @class */ (function () {
             this.updateWindow();
         }
     };
-    /*
-        private static refreshSlotsWindow_old(): void {
-    
-            const height = this.slotCountY * (this.INNER_WIDTH / this.slotCountX);
-            const location: UI.WindowLocationParams = {x: 20, y: 68, width: this.INNER_WIDTH, height: height};
-            const slotSize = 1000 / this.slotCountX;
-            const elemSlot: UI.UIElementSet = {};
-    
-            for(let i = 0; i < this.slotCount; i++){
-                elemSlot["slot" + i] = {
-                    type: "slot",
-                    x: (i % this.slotCountX) * slotSize,
-                    y: (i / this.slotCountX | 0) * slotSize,
-                    size: slotSize,
-                    visual: true,
-                    clicker: UiFuncs.slotClicker,
-                    onTouchEvent: UiFuncs.onTouchSlot
-                };
-            }
-    
-            this.slotsWindow = new UI.Window({
-                location: location,
-                params: {slot: "_default_slot_empty"},
-                drawing: [],
-                elements: elemSlot
-            });
-    
-            this.slotsWindow.setBackgroundColor(Color.parseColor("#8B8B8B"));
-    
-        }
-    */
     MainUI.refreshSlotsWindow = function () {
         var slotSize = 1000 / this.slotCountX;
         var elements = this.slotsWindow.getElements();
@@ -1297,7 +1251,6 @@ var MainUI = /** @class */ (function () {
                     x: 93, y: ScreenHeight - 50, scale: 2,
                     onNewState: function (state, container, elem) {
                         World.isWorldLoaded() && _a.switchWindow(!!state);
-                        //elem.texture = new UI.Texture(UI.TextureSource.get("default_switch" + (state ? "on" : "off")));
                     }
                 },
                 buttonPrev: {
@@ -1356,7 +1309,7 @@ var ViewMode = {
 var isItemView = function (a) { return a && a.mode === ViewMode.ITEM; };
 var isLiquidView = function (a) { return a && a.mode === ViewMode.LIQUID; };
 var isListView = function (a) { return a && a.mode === ViewMode.LIST; };
-var SubUI = /** @class */ (function () {
+var SubUI = (function () {
     function SubUI() {
     }
     SubUI.isOpened = function () {
@@ -1498,7 +1451,6 @@ var SubUI = /** @class */ (function () {
         var view = this.getView();
         this.select = view.tray[index];
         trayWindow.getElements().get("cursor").setPosition(0, index * 1000);
-        //trayWindow.getLocation().setScroll(0, view.tray.length * 60);
         var recipeType = RecipeTypeRegistry.get(this.select);
         this.window.addWindowInstance("custom", recipeType.getWindow());
         UiFuncs.moveOverlayOnTop(this.window);
@@ -1542,7 +1494,7 @@ var SubUI = /** @class */ (function () {
             drawing: [
                 { type: "background", color: Color.TRANSPARENT },
                 { type: "frame", x: 0, y: 0, width: 1000, height: 1000 / 1.5, bitmap: "default_frame_bg_light", scale: 4 },
-                { type: "frame", x: 300, y: 590, width: 500, height: 60, bitmap: "default_scroll_bg", scale: 4 } //scroll background
+                { type: "frame", x: 300, y: 590, width: 500, height: 60, bitmap: "default_scroll_bg", scale: 4 }
             ],
             elements: {
                 textRecipe: { type: "text", x: 280, y: 18, font: { size: 40, color: Color.WHITE, shadow: 0.5 } },
@@ -1587,19 +1539,6 @@ var SubUI = /** @class */ (function () {
                             _a.turnPage(0);
                         }
                     },
-                    /*
-                    onTouchEvent(elem, event){
-                        const that = this;
-                        Threading.initThread("rv_holdButton", () => {
-                            java.lang.Thread.sleep(500);
-                            while(elem.isTouched){
-                                that.turnPage(that.page - 1);
-                                java.lang.Thread.sleep(200);
-                            }
-                            alert("Touch Finish!");
-                        });
-                    }
-                    */
                 },
                 buttonNext: {
                     type: "button",
@@ -1650,7 +1589,7 @@ var SubUI = /** @class */ (function () {
     })();
     return SubUI;
 }());
-var RButton = /** @class */ (function () {
+var RButton = (function () {
     function RButton() {
     }
     RButton.putOnNativeGui = function (screenName, recipeKey) {
@@ -1695,7 +1634,7 @@ var RButton = /** @class */ (function () {
 Callback.addCallback("NativeGuiChanged", function (screen) {
     RButton.onNativeGuiChanged(screen);
 });
-var WorkbenchRecipe = /** @class */ (function (_super) {
+var WorkbenchRecipe = (function (_super) {
     __extends(WorkbenchRecipe, _super);
     function WorkbenchRecipe() {
         return _super.call(this, "Crafting", VanillaBlockID.crafting_table, {
@@ -1764,7 +1703,7 @@ var WorkbenchRecipe = /** @class */ (function (_super) {
     };
     return WorkbenchRecipe;
 }(RecipeType));
-var FurnaceRecipe = /** @class */ (function (_super) {
+var FurnaceRecipe = (function (_super) {
     __extends(FurnaceRecipe, _super);
     function FurnaceRecipe() {
         var _this = this;
@@ -1797,7 +1736,7 @@ var FurnaceRecipe = /** @class */ (function (_super) {
     };
     return FurnaceRecipe;
 }(RecipeType));
-var FurnaceFuelRecipe = /** @class */ (function (_super) {
+var FurnaceFuelRecipe = (function (_super) {
     __extends(FurnaceFuelRecipe, _super);
     function FurnaceFuelRecipe() {
         var _this = _super.call(this, "Furnace Fuel", VanillaBlockID.furnace, {
@@ -1829,7 +1768,7 @@ var FurnaceFuelRecipe = /** @class */ (function (_super) {
     };
     return FurnaceFuelRecipe;
 }(RecipeType));
-var LikeFurnaceRecipe = /** @class */ (function (_super) {
+var LikeFurnaceRecipe = (function (_super) {
     __extends(LikeFurnaceRecipe, _super);
     function LikeFurnaceRecipe(name, icon) {
         var _this = this;
@@ -1861,7 +1800,7 @@ var LikeFurnaceRecipe = /** @class */ (function (_super) {
 var BlastFurnaceRecipe = new LikeFurnaceRecipe("Blast Furnece", VanillaBlockID.blast_furnace);
 var SmokerRecipe = new LikeFurnaceRecipe("Smoker", VanillaBlockID.smoker);
 var CampfireRecipe = new LikeFurnaceRecipe("Campfire", VanillaBlockID.campfire);
-var BrewingRecipe = /** @class */ (function (_super) {
+var BrewingRecipe = (function (_super) {
     __extends(BrewingRecipe, _super);
     function BrewingRecipe() {
         var font = { size: 30, color: Color.WHITE, shadow: 0.5, align: UI.Font.ALIGN_CENTER };
@@ -1882,26 +1821,8 @@ var BrewingRecipe = /** @class */ (function (_super) {
     }
     BrewingRecipe.prototype.getAllList = function () {
         return BrewingRecipe.recipeListOld;
-        //return isLegacy ? BrewingRecipe.recipeListOld : BrewingRecipe.recipeList;
     };
     BrewingRecipe.recipeList = [];
-    /*
-        static registerRecipe(input: string, reagent: string, output: string): void {
-            const inputItem = BehaviorTools.convertToItem(input);
-            const reagentItem = BehaviorTools.convertToItem(reagent);
-            const outputItem = BehaviorTools.convertToItem(output);
-            inputItem && reagentItem && outputItem && this.recipeList.push({
-                input: [
-                    {id: VanillaItemID.blaze_powder, count: 1, data: 0},
-                    {id: reagentItem.id, count: 1, data: reagentItem.data},
-                    {id: inputItem.id, count: 1, data: inputItem.data},
-                ],
-                output: [
-                    {id: outputItem.id, count: 1, data: outputItem.data}
-                ]
-            });
-        }
-    */
     BrewingRecipe.recipeListOld = (function () {
         var recipes = [];
         var id = {
@@ -2000,7 +1921,7 @@ var BrewingRecipe = /** @class */ (function (_super) {
     })();
     return BrewingRecipe;
 }(RecipeType));
-var StonecutterRecipe = /** @class */ (function (_super) {
+var StonecutterRecipe = (function (_super) {
     __extends(StonecutterRecipe, _super);
     function StonecutterRecipe() {
         var _this = _super.call(this, "Stonecutter", VanillaBlockID.stonecutter_block, {
@@ -2016,13 +1937,6 @@ var StonecutterRecipe = /** @class */ (function (_super) {
         return _this;
     }
     StonecutterRecipe.registerRecipe = function (input, output) {
-        /*
-        const find = this.recipeList.find(function(recipe){
-            const item = recipe.input[0];
-            return item.id === input.id && item.count === input.count && item.data === input.data;
-        });
-        find ? find.output.push(output) : this.recipeList.push({input: [input], output: [output]});
-        */
         this.recipeList.push({ input: [input], output: [output] });
     };
     StonecutterRecipe.prototype.getAllList = function () {
@@ -2031,7 +1945,7 @@ var StonecutterRecipe = /** @class */ (function (_super) {
     StonecutterRecipe.recipeList = [];
     return StonecutterRecipe;
 }(RecipeType));
-var SmithingRecipe = /** @class */ (function (_super) {
+var SmithingRecipe = (function (_super) {
     __extends(SmithingRecipe, _super);
     function SmithingRecipe() {
         var _this = this;
@@ -2069,7 +1983,7 @@ var SmithingRecipe = /** @class */ (function (_super) {
     ];
     return SmithingRecipe;
 }(RecipeType));
-var TradingRecipe = /** @class */ (function (_super) {
+var TradingRecipe = (function (_super) {
     __extends(TradingRecipe, _super);
     function TradingRecipe() {
         var _this = _super.call(this, "Villager Trading", VanillaItemID.emerald, {
@@ -2155,7 +2069,7 @@ var TradingRecipe = /** @class */ (function (_super) {
     TradingRecipe.allTrade = [];
     return TradingRecipe;
 }(RecipeType));
-var LiquidFillingRecipe = /** @class */ (function (_super) {
+var LiquidFillingRecipe = (function (_super) {
     __extends(LiquidFillingRecipe, _super);
     function LiquidFillingRecipe() {
         var _this = this;
@@ -2203,238 +2117,6 @@ var LiquidFillingRecipe = /** @class */ (function (_super) {
     };
     return LiquidFillingRecipe;
 }(RecipeType));
-/*
-
-interface LootTips {
-    pools: number;
-    rolls: MinMax;
-    count: MinMax;
-    data: MinMax;
-    weight: number;
-    weight_sum: number;
-    random_chance: number;
-    killed_by_player: boolean;
-}
-
-interface LootRecipePattern extends RecipePattern {
-    tips: LootTips[]
-}
-
-
-class LootRecipe extends RecipeType {
-
-    private recipeList: RecipePattern[] = [];
-
-    constructor(name: string, icon: number | Tile, description?: string){
-
-        const elements: {[key: string]: Partial<UI.UIElement>} = {
-            textName: {type: "text", x: 180, y: 20, font: {size: 40, color: Color.WHITE, shadow: 0.5}}
-        };
-
-        for(let i = 0; i < 18; i++){
-            elements["output" + i] = {
-                x: (i % 6) * 100 + 200,
-                y: (i / 6 | 0) * 100 + 120,
-                size: 100
-            };
-        }
-
-        super(name, icon, {
-            drawing: [],
-            elements: elements
-        });
-
-        if(description){
-            this.setDescription(description);
-        }
-
-    }
-
-    getAllList(): RecipePattern[] {
-        return this.recipeList;
-    }
-
-    onOpen(elements: java.util.HashMap<string, UI.Element>, recipe: RecipePattern): void {
-        elements.get("textName").setBinding("text", recipe.name);
-    }
-
-    registerRecipe(name: string, json: KEX.LootModule.LootTableTypes.JsonFormat): void {
-
-        const items: ItemInstanceWithTips[] = [];
-
-        json.pools.forEach((pool, n) => {
-
-            let condition: KEX.LootModule.LootTableTypes.Conditions;
-            let entry: KEX.LootModule.LootTableTypes.Entries;
-            let func: KEX.LootModule.LootTableTypes.EntryFunctions;
-
-            let count: MinMax;
-            let data: MinMax;
-
-            let killed_by_player = false;
-            let random_chance = 1;
-
-            if(pool.conditions){
-
-                for(let i = 0; i < pool.conditions.length; i++){
-
-                    condition = pool.conditions[i];
-
-                    switch(condition.condition){
-                        case "killed_by_player":
-                        case "killed_by_player_or_pets":
-                            killed_by_player = true;
-                        break;
-                        case "random_chance":
-                        case "random_chance_with_looting":
-                            random_chance = condition.chance;
-                        break;
-                    }
-
-                }
-
-            }
-
-            if(pool.entries){
-
-                const weightSum = pool.entries.reduce((sum, ent) => {
-                    if(ent.type === "item"){
-                        return sum + (ent.weight || 0);
-                    }
-                    return sum;
-                }, 0);
-
-                for(let i = 0; i < pool.entries.length; i++){
-
-                    entry = pool.entries[i];
-
-                    switch(entry.type){
-
-                        case "item":
-
-                            count = unifyMinMax(entry.count || 1);
-                            data = unifyMinMax(0);
-
-                            if(entry.functions){
-                                for(let j = 0; j < entry.functions.length; j++){
-                                    func = entry.functions[j];
-                                    switch(func.function){
-                                        case "set_count":
-                                            count = unifyMinMax(func.count);
-                                        break;
-                                        case "set_data":
-                                            data = unifyMinMax(func.data);
-                                        break;
-                                    }
-                                }
-                            }
-
-                            items.push({
-                                id: getNumericID(entry.name),
-                                count: Math.max(count.min, 1),
-                                data: data && data.min === data.max ? data.min : -1,
-                                tips: {
-                                    pools: n,
-                                    count: count,
-                                    data: data,
-                                    weight: entry.weight,
-                                    weight_sum: weightSum,
-                                    random_chance: random_chance,
-                                    killed_by_player: killed_by_player
-                                }
-                            });
-
-                        break;
-
-                    }
-
-                }
-
-            }
-
-        });
-
-        this.recipeList.push({name: name, output: items});
-
-    }
-
-    slotTooltip(name: string, item: ItemInstance, tips: LootTips): string {
-        let tooltip = "";
-        tooltip += "Pool " + tips.pools;
-        if(tips.random_chance){
-            tooltip += " (" + (Math.round(tips.random_chance * 1000) / 10) + "%)";
-        }
-        tooltip += "\nrolls: " + MinMaxtoString(tips.rolls);
-        tooltip += "\ncount: " + MinMaxtoString(tips.count);
-        if(tips.weight){
-            tooltip += `\nweight: ${tips.weight} (${Math.round(tips.weight / tips.weight_sum * 1000) / 10}%)`;
-        }
-        if(tips.killed_by_player){
-            tooltip += "\nKilled By Player";
-        }
-        return "[" + name + "]\n" + tooltip;
-    }
-
-}
-
-
-const MobDropRecipe = new LootRecipe("Mob Drop", VanillaItemID.iron_sword);
-
-RecipeTypeRegistry.register("mob_drop", MobDropRecipe);
-
-
-class BlockDropRecipe extends RecipeType {
-
-    constructor(){
-
-        const elements: {[key: string]: Partial<UI.UIElement>} = {
-            input0: {x: 0, y: 0, size: 100}
-        };
-
-        for(let i = 0; i < 18; i++){
-            elements["output" + i] = {
-                x: (i % 6) * 100 + 200,
-                y: (i / 6 | 0) * 100 + 120,
-                size: 100
-            };
-        }
-
-        super("Block Drop", VanillaItemID.iron_pickaxe, {
-            drawing: [],
-            elements: elements
-        });
-
-    }
-
-    getAllList(): RecipePattern[] {
-        const list: RecipePattern[] = [];
-        ItemList.get().filter(iteminfo => iteminfo.type === "block").forEach(block => {
-            const output: ItemInstance[] = [];
-            const dropFunc = Block.getDropFunction(block.id);
-            let drops: [number, number, number, number?][] = [];
-            if(dropFunc){
-                try{
-                    drops = dropFunc({x: 0, y: 0, z: 0, relative: {x: 0, y: 0, z: 0}, side: -1}, block.id, block.data, 10, {silk: false, fortune: 0, efficiency: 0, unbreaking: 0, experience: 0}, {id: 0, count: 0, data: 0}, BlockSource.getDefaultForActor(Player.get())) || [];
-                }
-                catch(e){
-                    return;
-                }
-            }
-            if(drops.length > 0){
-                list.push({
-                    input: [{id: block.id, count: 1, data: block.data}],
-                    output: drops.map(block => ({id: block[0], count: block[1], data: block[2]}))
-                });
-            }
-        });
-        return list;
-    }
-
-}
-
-RecipeTypeRegistry.register("block_drop", new BlockDropRecipe());
-
-*/ 
 (function () {
     if (Cfg.$workbench) {
         RecipeTypeRegistry.register("workbench", new WorkbenchRecipe());
@@ -2490,21 +2172,6 @@ ModAPI.addAPICallback("KernelExtension", function (api) {
         ],
         output: [{ id: recipe.resultID, count: 1, data: -1 }]
     }); }));
-    /*
-    
-        const addMobDropRecipe = (name: string, tableName: string): void => {
-            api.LootModule.createLootTableModifier(tableName).addJSPostModifyCallback(json => {
-                MobDropRecipe.registerRecipe(name, json)
-            });
-            api.LootModule.forceLoad(tableName);
-        }
-    
-        addMobDropRecipe("Zombie", "entities/zombie");
-        addMobDropRecipe("Skeleton", "entities/skeleton");
-        addMobDropRecipe("Spider", "entities/spider");
-        addMobDropRecipe("Creeper", "entities/creeper");
-    
-    */
 });
 Callback.addCallback("PostLoaded", function () {
     ItemList.addVanillaItems();
@@ -2564,12 +2231,6 @@ Callback.addCallback("PostLoaded", function () {
                         }
                     }
                 }
-                /*
-                else if(json["minecraft:recipe_brewing_mix"]){
-                    const recipe = json["minecraft:recipe_brewing_mix"];
-                    recipe.tags.some(tag => tag === "brewing_stand") && BrewingRecipe.registerRecipe(recipe.input, recipe.reagent, recipe.output);
-                }
-                */
                 else if (json["minecraft:recipe_shapeless"]) {
                     var recipe = json["minecraft:recipe_shapeless"];
                     var stonecutterIn = { id: getNumericID(recipe.ingredients[0].item), count: recipe.ingredients[0].count || 1, data: recipe.ingredients[0].data || 0 };
@@ -2595,17 +2256,3 @@ ModAPI.registerAPI("RecipeViewer", {
     RecipeType: RecipeType,
     RecipeTypeRegistry: RecipeTypeRegistry
 });
-/*
-Callback.addCallback("ItemUse", (coords, item, block, isExternal, player) => {
-    const client = Network.getClientForPlayer(player);
-    if(client){
-        client.send("rv_test", {id: item.id, data: item.data});
-    }
-});
-
-
-Network.addClientPacket("rv_test", item => {
-    const localId = Network.serverToLocalId(item.id);
-    Game.message(item.id + " -> " + localId + " : " + Item.isValid(item.id) + "-> " + Item.isValid(localId));
-});
-*/ 
