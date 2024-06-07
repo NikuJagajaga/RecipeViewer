@@ -214,15 +214,18 @@ var ItemList = (function () {
         });
     };
     ItemList.cacheIcons = function () {
-        this.list.forEach(function (item) {
+        for (var _i = 0, _a = this.list; _i < _a.length; _i++) {
+            var item = _a[_i];
             ItemIconSource.getScaledIcon(item.id, item.data, 16);
-        });
+        }
     };
     ItemList.list = [];
     return ItemList;
 }());
 var UiFuncs;
 (function (UiFuncs) {
+    var Bitmap = android.graphics.Bitmap;
+    var Canvas = android.graphics.Canvas;
     var tooltipsFont = new UI.Font({ color: Color.WHITE, size: 16, shadow: 0.5 });
     UiFuncs.slotClicker = {
         onClick: function (container, tile, elem) {
@@ -334,10 +337,10 @@ var UiFuncs;
     var FrameTex = UI.FrameTextureSource.get("workbench_frame3");
     var FrameTexCentralColor = FrameTex.getCentralColor();
     var createRect = function (w, h) {
-        var bitmap = new android.graphics.Bitmap.createBitmap(w | 0, h | 0, android.graphics.Bitmap.Config.ARGB_8888);
-        var canvas = new android.graphics.Canvas(bitmap);
+        var bitmap = new Bitmap.createBitmap(w | 0, h | 0, Bitmap.Config.ARGB_8888);
+        var canvas = new Canvas(bitmap);
         canvas.drawARGB(127, 255, 255, 255);
-        return bitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, true);
+        return bitmap.copy(Bitmap.Config.ARGB_8888, true);
     };
     UiFuncs.popupTips = function (str, elem, event) {
         var _a, _b;
@@ -1146,8 +1149,8 @@ var MainUI = (function () {
         return window;
     })();
     MainUI.window = (function () {
-        var window = new UI.WindowGroup();
-        var controller = window.addWindow("controller", {
+        var winGroup = new UI.WindowGroup();
+        var controller = winGroup.addWindow("controller", {
             location: { x: 0, y: 0, width: 1000, height: ScreenHeight },
             drawing: [
                 { type: "frame", x: 0, y: 0, width: 1000, height: ScreenHeight, bitmap: "classic_frame_bg_light", scale: 3 },
@@ -1280,11 +1283,11 @@ var MainUI = (function () {
         });
         _a.setSlotCount(Cfg.slotCountX);
         _a.refreshSlotsWindow();
-        window.addWindowInstance("list", _a.slotsWindow);
-        window.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
-        window.setContainer(new UI.Container());
-        window.setBlockingBackground(true);
-        window.setCloseOnBackPressed(true);
+        winGroup.addWindowInstance("list", _a.slotsWindow);
+        winGroup.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
+        winGroup.setContainer(new UI.Container());
+        winGroup.setBlockingBackground(true);
+        winGroup.setCloseOnBackPressed(true);
         controller.setBackgroundColor(Color.TRANSPARENT);
         controller.setEventListener({
             onOpen: function (window) {
@@ -1296,7 +1299,7 @@ var MainUI = (function () {
                 StartButton.open();
             }
         });
-        return window;
+        return winGroup;
     })();
     MainUI.whileDisplaying = false;
     return MainUI;
@@ -1686,9 +1689,10 @@ var WorkbenchRecipe = (function (_super) {
     };
     WorkbenchRecipe.prototype.getAllList = function () {
         var recipes = new java.util.HashSet();
-        ItemList.get().forEach(function (item) {
+        for (var _i = 0, _a = ItemList.get(); _i < _a.length; _i++) {
+            var item = _a[_i];
             recipes.addAll(Recipes.getWorkbenchRecipesByResult(item.id, -1, -1));
-        });
+        }
         return this.convertToJSArray(recipes);
     };
     WorkbenchRecipe.prototype.getList = function (id, data, isUsage) {

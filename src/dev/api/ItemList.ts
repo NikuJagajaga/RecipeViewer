@@ -134,9 +134,9 @@ class ItemList {
     }
 
     static cacheIcons(): void {
-        this.list.forEach(item => {
+        for(const item of this.list){
             ItemIconSource.getScaledIcon(item.id, item.data, 16);
-        });
+        }
     }
 
 }

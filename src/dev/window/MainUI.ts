@@ -17,7 +17,7 @@ class MainUI {
         {text: "Sort by ID (DESC)", type: "id", reverse: true},
         {text: "Sort by Name (ASC)", type: "name", reverse: false},
         {text: "Sort by Name (DESC)", type: "name", reverse: true}
-    ];
+    ] as const;
 
 
     private static sortFunc = {
@@ -77,37 +77,8 @@ class MainUI {
         }
 
     }
-/*
-    private static refreshSlotsWindow_old(): void {
 
-        const height = this.slotCountY * (this.INNER_WIDTH / this.slotCountX);
-        const location: UI.WindowLocationParams = {x: 20, y: 68, width: this.INNER_WIDTH, height: height};
-        const slotSize = 1000 / this.slotCountX;
-        const elemSlot: UI.UIElementSet = {};
-
-        for(let i = 0; i < this.slotCount; i++){
-            elemSlot["slot" + i] = {
-                type: "slot",
-                x: (i % this.slotCountX) * slotSize,
-                y: (i / this.slotCountX | 0) * slotSize,
-                size: slotSize,
-                visual: true,
-                clicker: UiFuncs.slotClicker,
-                onTouchEvent: UiFuncs.onTouchSlot
-            };
-        }
-
-        this.slotsWindow = new UI.Window({
-            location: location,
-            params: {slot: "_default_slot_empty"},
-            drawing: [],
-            elements: elemSlot
-        });
-
-        this.slotsWindow.setBackgroundColor(Color.parseColor("#8B8B8B"));
-
-    }
-*/
+    
     private static refreshSlotsWindow(): void {
 
         const slotSize = 1000 / this.slotCountX;
@@ -149,7 +120,7 @@ class MainUI {
             };
         }
 
-        const window: UI.Window = new UI.Window({
+        const window = new UI.Window({
             location: location,
             params: {slot: "_default_slot_empty"},
             elements: elemSlot
@@ -206,9 +177,9 @@ class MainUI {
 
     private static readonly window: UI.WindowGroup = (() => {
 
-        const window = new UI.WindowGroup();
+        const winGroup = new UI.WindowGroup();
 
-        const controller = window.addWindow("controller", {
+        const controller = winGroup.addWindow("controller", {
             location: {x: 0, y: 0, width: 1000, height: ScreenHeight},
             drawing: [
                 {type: "frame", x: 0, y: 0, width: 1000, height: ScreenHeight, bitmap: "classic_frame_bg_light", scale: 3},
@@ -343,11 +314,11 @@ class MainUI {
 
         this.setSlotCount(Cfg.slotCountX);
         this.refreshSlotsWindow();
-        window.addWindowInstance("list", this.slotsWindow);
-        window.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
-        window.setContainer(new UI.Container());
-        window.setBlockingBackground(true);
-        window.setCloseOnBackPressed(true);
+        winGroup.addWindowInstance("list", this.slotsWindow);
+        winGroup.addWindowInstance("overlay", UiFuncs.genOverlayWindow());
+        winGroup.setContainer(new UI.Container());
+        winGroup.setBlockingBackground(true);
+        winGroup.setCloseOnBackPressed(true);
 
         controller.setBackgroundColor(Color.TRANSPARENT);
 
@@ -362,7 +333,7 @@ class MainUI {
             }
         });
 
-        return window;
+        return winGroup;
 
     })();
 

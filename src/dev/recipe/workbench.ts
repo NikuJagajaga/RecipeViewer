@@ -52,9 +52,9 @@ class WorkbenchRecipe extends RecipeType {
 
     getAllList(): RecipePattern[] {
         const recipes: java.util.Collection<Recipes.WorkbenchRecipe> = new java.util.HashSet();
-        ItemList.get().forEach(item => {
+        for(const item of ItemList.get()){
             recipes.addAll(Recipes.getWorkbenchRecipesByResult(item.id, -1, -1));
-        });
+        }
         return this.convertToJSArray(recipes);
     }
 
