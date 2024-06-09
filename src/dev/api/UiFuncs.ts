@@ -4,6 +4,14 @@ namespace UiFuncs {
     const Canvas = android.graphics.Canvas;
     const tooltipsFont = new UI.Font({color: Color.WHITE, size: 16, shadow: 0.5});
 
+
+    const hlBmp = new Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888);
+    const hlCvs = new Canvas(hlBmp);
+    hlCvs.drawARGB(127, 255, 255, 255);
+
+    UI.TextureSource.put("rv.highlight_rect", hlBmp);
+
+
     export const slotClicker: UI.UIClickEvent = {
         onClick: (container, tile, elem) => {
             const source = elem.getBinding("source");
@@ -36,14 +44,14 @@ namespace UiFuncs {
         const window = new UI.Window({
             location: {x: 0, y: 0, width: 1000, height: ScreenHeight},
             elements: {
-                selectionFrame: {
+                highlightRect: {
                     type: "image",
                     x: -1000,
                     y: -1000,
                     width: 64,
                     height: 64,
                     scale: 1,
-                    bitmap: "_selection"
+                    bitmap: "rv.highlight_rect"
                 },
                 popupFrame: {
                     type: "image",
@@ -120,17 +128,10 @@ namespace UiFuncs {
     const FrameTex = UI.FrameTextureSource.get("workbench_frame3");
     const FrameTexCentralColor = FrameTex.getCentralColor();
 
-    const createRect = (w: number, h: number): android.graphics.Bitmap => {
-        const bitmap = new Bitmap.createBitmap(w | 0, h | 0, Bitmap.Config.ARGB_8888);
-        const canvas = new Canvas(bitmap);
-        canvas.drawARGB(127, 255, 255, 255);
-        return bitmap.copy(Bitmap.Config.ARGB_8888, true);
-    }
-
     export const popupTips = (str: string, elem: UI.Element, event: {x: number, y: number, localX: number, localY: number, type: TouchEventType}): void => {
         const location = elem.window.getLocation();
         const elements = getWindowGroup(elem).getElements();
-        const selection = elements.get("selectionFrame");
+        const highlight = elements.get("highlightRect");
         const text = elements.get("popupText");
         const frame = elements.get("popupFrame");
         const MOVEtoLONG_CLICK = event.type == "LONG_CLICK" && frame.x !== -1000 && frame.y !== -1000;
@@ -144,12 +145,11 @@ namespace UiFuncs {
             y = location.y + location.windowToGlobal(elem.y) | 0;
             w = location.windowToGlobal(elem.elementRect.width()) | 0;
             h = location.windowToGlobal(elem.elementRect.height()) | 0;
-            if(selection.elementRect.width() !== w || selection.elementRect.height() !== h){
-                selection.texture?.release();
-                selection.texture = new UI.Texture(createRect(w, h));
-                selection.setSize(w, h);
+            if(highlight.elementRect.width() !== w || highlight.elementRect.height() !== h){
+                highlight.texture?.resizeAll(w, h);
+                highlight.setSize(w, h);
             }
-            selection.setPosition(x, y);
+            highlight.setPosition(x, y);
 
             const split = str.split("\n");
             w = Math.max(...split.map(s => tooltipsFont.getTextWidth(s, 1))) + 20;
@@ -173,7 +173,7 @@ namespace UiFuncs {
                     while(elem.isTouched){
                         java.lang.Thread.sleep(200);
                     }
-                    selection.setPosition(-1000, -1000);
+                    highlight.setPosition(-1000, -1000);
                     frame.setPosition(-1000, -1000);
                     text.setPosition(-1000, -1000);
                 });
@@ -181,7 +181,7 @@ namespace UiFuncs {
 
         }
         else{
-            selection.setPosition(-1000, -1000);
+            highlight.setPosition(-1000, -1000);
             frame.setPosition(-1000, -1000);
             text.setPosition(-1000, -1000);
         }

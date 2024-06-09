@@ -264,7 +264,7 @@ var UiFuncs;
                     width: 64,
                     height: 64,
                     scale: 1,
-                    bitmap: "_selection"
+                    bitmap: "rv.highlight_rect"
                 },
                 popupFrame: {
                     type: "image",
@@ -336,12 +336,10 @@ var UiFuncs;
     };
     var FrameTex = UI.FrameTextureSource.get("workbench_frame3");
     var FrameTexCentralColor = FrameTex.getCentralColor();
-    var createRect = function (w, h) {
-        var bitmap = new Bitmap.createBitmap(w | 0, h | 0, Bitmap.Config.ARGB_8888);
-        var canvas = new Canvas(bitmap);
-        canvas.drawARGB(127, 255, 255, 255);
-        return bitmap.copy(Bitmap.Config.ARGB_8888, true);
-    };
+    var hlBmp = new Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888);
+    var hlCvs = new Canvas(hlBmp);
+    hlCvs.drawARGB(127, 255, 255, 255);
+    UI.TextureSource.put("rv.highlight_rect", hlBmp);
     UiFuncs.popupTips = function (str, elem, event) {
         var _a, _b;
         var location = elem.window.getLocation();
@@ -360,8 +358,8 @@ var UiFuncs;
             w = location.windowToGlobal(elem.elementRect.width()) | 0;
             h = location.windowToGlobal(elem.elementRect.height()) | 0;
             if (selection.elementRect.width() !== w || selection.elementRect.height() !== h) {
-                (_a = selection.texture) === null || _a === void 0 ? void 0 : _a.release();
-                selection.texture = new UI.Texture(createRect(w, h));
+                Game.message("resize to: ".concat(w, " x ").concat(h));
+                (_a = selection.texture) === null || _a === void 0 ? void 0 : _a.resizeAll(w, h);
                 selection.setSize(w, h);
             }
             selection.setPosition(x, y);
@@ -381,16 +379,6 @@ var UiFuncs;
             frame.setPosition(Math_clamp(x - w / 2, 0, 1000 - w), y);
             text.setPosition(Math_clamp(x - w / 2, 0, 1000 - w) + 10, y + 7);
             text.setBinding("text", str);
-            if (!Threading.getThread("rv_popupTips")) {
-                Threading.initThread("rv_popupTips", function () {
-                    while (elem.isTouched) {
-                        java.lang.Thread.sleep(200);
-                    }
-                    selection.setPosition(-1000, -1000);
-                    frame.setPosition(-1000, -1000);
-                    text.setPosition(-1000, -1000);
-                });
-            }
         }
         else {
             selection.setPosition(-1000, -1000);
@@ -1091,7 +1079,7 @@ var MainUI = (function () {
     MainUI.tankCount = 8;
     MainUI.slotsWindow = (function () {
         var height = ScreenHeight - 68 - 70;
-        var location = { x: 20, y: 68, width: _a.INNER_WIDTH, height: height };
+        var location = { x: (1000 - _a.INNER_WIDTH) / 2, y: 68, width: _a.INNER_WIDTH, height: height };
         var slotSize = 1000 / _a.SLOT_X_MAX;
         var elemSlot = {};
         for (var i = 0; i < _a.SLOT_MAX; i++) {
@@ -1115,7 +1103,7 @@ var MainUI = (function () {
     })();
     MainUI.tanksWindow = (function () {
         var height = ScreenHeight - 68 - 70;
-        var location = { x: 20, y: 68, width: _a.INNER_WIDTH, height: height };
+        var location = { x: (1000 - _a.INNER_WIDTH) / 2, y: 68, width: _a.INNER_WIDTH, height: height };
         var drawTank = [];
         var elemTank = {};
         for (var i = 0; i < _a.tankCount; i++) {
@@ -1154,7 +1142,7 @@ var MainUI = (function () {
             location: { x: 0, y: 0, width: 1000, height: ScreenHeight },
             drawing: [
                 { type: "frame", x: 0, y: 0, width: 1000, height: ScreenHeight, bitmap: "classic_frame_bg_light", scale: 3 },
-                { type: "frame", x: 20 - 3, y: 68 - 3, width: 960 + 6, height: ScreenHeight - 68 - 70 + 6, bitmap: "classic_frame_slot", scale: 3 },
+                { type: "frame", x: (1000 - _a.INNER_WIDTH) / 2 - 3, y: 68 - 3, width: 960 + 6, height: ScreenHeight - 68 - 70 + 6, bitmap: "classic_frame_slot", scale: 3 },
                 { type: "frame", x: 20, y: ScreenHeight - 60, width: 230, height: 50, bitmap: "classic_frame_bg_light", scale: 1 },
                 { type: "line", x1: 740, y1: 40, x2: 900, y2: 40, width: 4, color: Color.DKGRAY },
                 { type: "text", x: 40, y: ScreenHeight - 27, text: "Item", font: { size: 20 } },

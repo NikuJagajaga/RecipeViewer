@@ -104,7 +104,7 @@ class MainUI {
     private static slotsWindow: UI.Window = (() => {
 
         const height = ScreenHeight - 68 - 70;
-        const location: UI.WindowLocationParams = {x: 20, y: 68, width: this.INNER_WIDTH, height: height};
+        const location: UI.WindowLocationParams = {x: (1000 - this.INNER_WIDTH) / 2, y: 68, width: this.INNER_WIDTH, height: height};
         const slotSize = 1000 / this.SLOT_X_MAX;
         const elemSlot: UI.UIElementSet = {};
 
@@ -135,7 +135,7 @@ class MainUI {
     private static tanksWindow: UI.Window = (() => {
 
         const height = ScreenHeight - 68 - 70;
-        const location: UI.WindowLocationParams = {x: 20, y: 68, width: this.INNER_WIDTH, height: height};
+        const location: UI.WindowLocationParams = {x: (1000 - this.INNER_WIDTH) / 2, y: 68, width: this.INNER_WIDTH, height: height};
         const drawTank: UI.DrawingElement[] = [];
         const elemTank: UI.UIElementSet = {};
 
@@ -183,7 +183,7 @@ class MainUI {
             location: {x: 0, y: 0, width: 1000, height: ScreenHeight},
             drawing: [
                 {type: "frame", x: 0, y: 0, width: 1000, height: ScreenHeight, bitmap: "classic_frame_bg_light", scale: 3},
-                {type: "frame", x: 20 - 3, y: 68 - 3, width: 960 + 6, height: ScreenHeight - 68 - 70 + 6, bitmap: "classic_frame_slot", scale: 3},
+                {type: "frame", x: (1000 - this.INNER_WIDTH) / 2 - 3, y: 68 - 3, width: 960 + 6, height: ScreenHeight - 68 - 70 + 6, bitmap: "classic_frame_slot", scale: 3},
                 {type: "frame", x: 20, y: ScreenHeight - 60, width: 230, height: 50, bitmap: "classic_frame_bg_light", scale: 1},
                 {type: "line", x1: 740, y1: 40, x2: 900, y2: 40, width: 4, color: Color.DKGRAY},
                 {type: "text", x: 40, y: ScreenHeight - 27, text: "Item", font: {size: 20}},
